@@ -902,16 +902,17 @@ var Sfx = (function () {
 
   /* 连击 ≥ 3 后：音效换成重击声，全部激励语音统一为 "Great!"（预生成高亢英语） */
   var COMBO_HEAVY = 3;
-  function comboFx(combo) {
+  /* suppressSpeech=true 时只放古风器乐，不念英文（字词卡牌改用预录浑厚男声 wordsCorrect） */
+  function comboFx(combo, suppressSpeech) {
     if (combo >= COMBO_HEAVY) {
       heavyStrike();
-      say('Great!', { rate: 1.06, pitch: 1.12 });
+      if (!suppressSpeech) say('Great!', { rate: 1.06, pitch: 1.12 });
       return;
     }
     var k = Math.min(19, Math.floor((combo - 1) / 5));
     var milestone = (combo % 5 === 0);
     playTier(k, milestone);
-    if (milestone) {
+    if (milestone && !suppressSpeech) {
       var idx = ((combo / 5) - 1) % ENG_INC.length;
       if (idx < 0) idx = 0;
       say(ENG_INC[idx], { rate: 1.06, pitch: 1.12 });
@@ -923,6 +924,27 @@ var Sfx = (function () {
     if (combo >= COMBO_HEAVY) return;
     if (Math.random() > 0.26) return;
     say(engPick(), { rate: 1.06, pitch: 1.12 });
+  }
+
+  /* ==================== 字词卡牌「答对」浑厚男声激励 ==================== */
+  /* 预生成 AI 浑厚男声（云扬 zh-CN-YunyangNeural，微软神经网络），文件在 voice/fx/
+       correct_N.mp3（N=0..7，随连击递增强度、循环取避免重复）+ milestone_N.mp3（N=0..2，combo 为 5 的倍数时更燃）
+     文件缺失时降级为浑厚男声 Web Speech（male 角色） */
+  var fxPraiseIdx = 0;
+  function wordsCorrect(combo) {
+    if (muted) return;
+    var path;
+    if (combo && combo % 5 === 0) {
+      path = 'fx/milestone_' + (((Math.floor(combo / 5) - 1) % 3 + 3) % 3);
+    } else {
+      var top = Math.min(7, Math.max(0, (combo || 1) - 1));   /* 连击越高越热烈 */
+      path = 'fx/correct_' + (fxPraiseIdx % (top + 1));
+    }
+    fxPraiseIdx++;
+    VP.play(path, null, function () {
+      /* 预录文件缺失 → 降级为浑厚男声 Web Speech（male 角色） */
+      sayFallback('正确', { rate: 0.9, pitch: 0.78, profile: 'male' });
+    });
   }
 
   function comboFail() {
@@ -1268,6 +1290,7 @@ var Sfx = (function () {
     examBeep: examBeep, examChime: examChime, examTick: examTick,
     speakSeq: speakSeq, stopSeq: stopSeq,
     comboFx: comboFx, comboPraise: comboPraise, comboFail: comboFail,
+    wordsCorrect: wordsCorrect,
     openQuiz: openQuiz, settleWin: settleWin, settleFail: settleFail,
     /* 数学 / 例句 AI 语音 */
     mathSpeak: mathSpeak, rhymeSpeak: rhymeSpeak, rhymeTeach: rhymeTeach, sentenceRead: sentenceRead,

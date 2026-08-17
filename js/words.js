@@ -489,8 +489,7 @@ var Words = (function () {
           (opts || []).map(function (p, idx) {
             return '<div class="choice" data-p="' + (p || '') + '" data-i="' + idx + '">' + (p || '') + '</div>';
           }).join('') +
-        '</div>' +
-        (conf && conf.kind && !isPoly ? '<div class="confuse-tip">易混点：' + conf.kind + '</div>' : '');
+        '</div>';
     }
 
     host.innerHTML =
@@ -559,8 +558,8 @@ var Words = (function () {
     if (anchor) { anchor.classList.add('hit'); FX.impact(lv, anchor, ''); }  /* 不显示积分数字 */
     FX.flame(anchor, combo);                    // 连对火焰粒子爆发
     FX.comboFire(combo);                        // Combo 持续燃烧效果
-    Sfx.comboFx(combo);                         // 20 档古风器乐音效（5 的倍数点含播报）
-    if (combo % 5 !== 0) Sfx.comboPraise(combo); // 非播报点低概率随口小鼓励
+    Sfx.comboFx(combo, true);                   // 20 档古风器乐音效（不念英文，改用预录浑厚男声）
+    Sfx.wordsCorrect(combo);                     // 答对激励：预录 AI 浑厚男声（云扬）
     if (scoreEl) { FX.pop(scoreEl); FX.flicker(scoreEl); }
     if (comboEl) { FX.pop(comboEl); comboEl.textContent = combo; }
     if (combo === 3) FX.banner('COMBO ×3', '#55d6ff', 52);

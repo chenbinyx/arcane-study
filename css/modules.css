@@ -448,4 +448,8 @@
 }
 .timer-panel .btn-ghost { padding: 6px 14px; font-size: 12px; letter-spacing: 1px; }
 .timer-panel .btn-ghost:hover { color: #fff; border-color: var(--gold); }
+/* 计时器置于卡牌/算室下方：独立容器 + 与上方内容分隔 */
+.bottom-timer { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px dashed rgba(242,183,78,.18); }
+.bottom-timer .timer-btn { align-self: flex-start; }
+.bottom-timer .timer-panel { margin: 0; width: 100%; }
 
