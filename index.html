@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>海克斯学堂 · ARCANE ACADEMY</title>
+<link rel="stylesheet" href="css/base.css?v=20260811c12">
+<link rel="stylesheet" href="css/cards.css?v=20260813c20">
+<link rel="stylesheet" href="css/modules.css?v=20260811c14">
+</head>
+<body>
+
+<div id="fx"></div>
+
+<div id="camera">
+<div id="stage">
+
+  <!-- ======== 顶栏 ======== -->
+  <div class="topbar">
+    <div class="brand" onclick="App.go('home')">
+      <div class="brand-mark"></div>
+      <div class="brand-txt"><b>海克斯学堂</b><span>ARCANE ACADEMY</span></div>
+    </div>
+      <div class="hud">
+        <div class="chip lvl"><i>◆</i><span>等级</span><b id="hudLv">1</b></div>
+        <div class="chip"><span>经验</span><div class="xpbar"><i id="hudXp" style="width:0%"></i></div><b id="hudXpTxt">0</b></div>
+        <div class="chip streak"><i>✦</i><span>连续</span><b id="hudStreak">0</b><span>天</span></div>
+        <button class="btn-ghost arc-btn" onclick="App.go('user')"><i id="hudName">小学童</i></button>
+        <button class="btn-ghost" onclick="App.go('archive')">档案</button>
+        <button class="btn-ghost" onclick="App.go('home')">返回大厅</button>
+      </div>
+    <div class="spacer"></div>
+    <button class="btn-ghost" id="syncBtn" onclick="App.showSync()" style="font-size:11px;letter-spacing:1px">☁ 云同步</button>
+    <button class="btn-ghost eye-btn" id="eyeBtn" onclick="App.toggleEye()" title="护眼模式：柔光低对比，保护视力" style="font-size:11px;letter-spacing:1px">👁 护眼</button>
+  </div>
+
+  <!-- ======== 首页 ======== -->
+  <div class="view on" id="v-home">
+    <div class="home">
+      <div class="hero">
+        <h1>海克斯学堂</h1>
+        <p>ARCANE ACADEMY · 皮尔特沃夫学徒训练档案</p>
+        <div class="rule"></div>
+      </div>
+
+      <div class="grid4">
+        <!-- 板块一 -->
+        <div class="panel p1" onclick="App.go('words')">
+          <div class="art">
+            <svg viewBox="0 0 300 320" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <linearGradient id="g1a" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#1d3350"/><stop offset="1" stop-color="#0a1120"/>
+                </linearGradient>
+                <linearGradient id="g1b" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#7fe6ff"/><stop offset="1" stop-color="#1b7fa8"/>
+                </linearGradient>
+              </defs>
+              <rect width="300" height="320" fill="#101c2e"/>
+              <polygon points="0,232 78,150 128,196 196,110 300,206 300,320 0,320" fill="#0b1526"/>
+              <polygon points="0,232 78,150 128,196 110,320 0,320" fill="#08111f"/>
+              <circle cx="150" cy="94" r="62" fill="rgba(85,214,255,.16)"/>
+              <polygon points="150,34 186,94 150,154 114,94" fill="url(#g1b)" opacity=".92"/>
+              <polygon points="150,34 186,94 150,94" fill="#bff0ff" opacity=".85"/>
+              <polygon points="150,94 186,94 150,154" fill="#0f4f6d" opacity=".9"/>
+              <g opacity=".9">
+                <rect x="66" y="150" width="52" height="74" rx="2" fill="#16283f" stroke="#f2b74e" stroke-width="2" transform="rotate(-13 92 187)"/>
+                <rect x="182" y="146" width="52" height="74" rx="2" fill="#16283f" stroke="#f2b74e" stroke-width="2" transform="rotate(11 208 183)"/>
+                <rect x="124" y="170" width="56" height="80" rx="2" fill="#1b2f49" stroke="#ffe0a3" stroke-width="2.5"/>
+                <text x="152" y="222" font-size="34" fill="#ffffff" text-anchor="middle" font-family="serif">字</text>
+              </g>
+              <polygon points="150,0 168,0 154,60 136,60" fill="rgba(191,240,255,.14)"/>
+            </svg>
+          </div>
+          <div class="veil"></div>
+          <div class="stat"><b id="s1">0</b><i>今日字词</i></div>
+          <div class="meta">
+            <div class="idx">CHAPTER I</div>
+            <h3>字词卡牌</h3>
+            <p class="sub">人教版识字表 · 写字表 · 词语表<br>抽卡辨音，连击越高冲击越猛</p>
+            <div class="tags"><span>一年级 — 三年级</span><span>上下册</span><span>连击爆分</span></div>
+          </div>
+        </div>
+
+        <!-- 板块二 -->
+        <div class="panel p2" onclick="App.go('review')">
+          <div class="art">
+            <svg viewBox="0 0 300 320" preserveAspectRatio="xMidYMid slice">
+              <rect width="300" height="320" fill="#170f18"/>
+              <polygon points="0,246 60,190 120,224 190,160 300,224 300,320 0,320" fill="#120b16"/>
+              <circle cx="150" cy="120" r="70" fill="rgba(255,74,94,.14)"/>
+              <polygon points="150,52 196,120 150,188 104,120" fill="#3a1622" stroke="#ff4a5e" stroke-width="2.5"/>
+              <polygon points="150,52 196,120 150,120" fill="#5d2130"/>
+              <polygon points="150,120 150,188 104,120" fill="#2a0f18"/>
+              <path d="M150 52 L142 104 L166 112 L150 188" stroke="#ff8a98" stroke-width="3" fill="none" opacity=".9"/>
+              <g stroke="#f2b74e" stroke-width="2" fill="none" opacity=".75">
+                <path d="M60 244 l24 -22 l20 12"/><path d="M214 236 l22 -20 l20 14"/>
+              </g>
+              <g fill="#ffd98a" opacity=".9">
+                <rect x="88" y="252" width="7" height="7" transform="rotate(45 91 255)"/>
+                <rect x="200" y="244" width="6" height="6" transform="rotate(45 203 247)"/>
+                <rect x="148" y="262" width="8" height="8" transform="rotate(45 152 266)"/>
+              </g>
+            </svg>
+          </div>
+          <div class="veil"></div>
+          <div class="stat"><b id="s2">0</b><i>待攻克</i></div>
+          <div class="meta">
+            <div class="idx">CHAPTER II</div>
+            <h3>错字熔炉</h3>
+            <p class="sub">错过的字词全部收进熔炉<br>语音听写，反复淬炼直到掌握</p>
+            <div class="tags"><span>自动收录</span><span>听写模式</span><span>掌握度追踪</span></div>
+          </div>
+        </div>
+
+        <!-- 板块三 -->
+        <div class="panel p3" onclick="App.go('math')">
+          <div class="art">
+            <svg viewBox="0 0 300 320" preserveAspectRatio="xMidYMid slice">
+              <rect width="300" height="320" fill="#1a1509"/>
+              <polygon points="0,250 70,196 140,230 210,176 300,232 300,320 0,320" fill="#120e06"/>
+              <g transform="translate(150 118)">
+                <circle r="66" fill="rgba(242,183,78,.14)"/>
+                <g fill="#3a2c11" stroke="#f2b74e" stroke-width="2.5">
+                  <circle r="46"/>
+                </g>
+                <g fill="#f2b74e">
+                  <rect x="-6" y="-60" width="12" height="16"/><rect x="-6" y="44" width="12" height="16"/>
+                  <rect x="-60" y="-6" width="16" height="12"/><rect x="44" y="-6" width="16" height="12"/>
+                  <rect x="-48" y="-48" width="14" height="12" transform="rotate(45)"/>
+                  <rect x="34" y="36" width="14" height="12" transform="rotate(45)"/>
+                </g>
+                <circle r="24" fill="#0f0c05" stroke="#ffe0a3" stroke-width="2"/>
+                <text y="9" font-size="24" fill="#ffe0a3" text-anchor="middle" font-family="serif">×</text>
+              </g>
+              <g transform="translate(66 214)" opacity=".85">
+                <circle r="26" fill="#241a08" stroke="#c98f2c" stroke-width="2"/>
+                <text y="8" font-size="20" fill="#ffd98a" text-anchor="middle" font-family="serif">＋</text>
+              </g>
+              <g transform="translate(236 206)" opacity=".85">
+                <circle r="24" fill="#241a08" stroke="#c98f2c" stroke-width="2"/>
+                <text y="8" font-size="20" fill="#ffd98a" text-anchor="middle" font-family="serif">－</text>
+              </g>
+            </svg>
+          </div>
+          <div class="veil"></div>
+          <div class="stat"><b id="s3">0</b><i>今日题数</i></div>
+          <div class="meta">
+            <div class="idx">CHAPTER III</div>
+            <h3>机械算室</h3>
+            <p class="sub">乘法口诀闯关 · 100 以内加减<br>听算模式由学堂语音报题</p>
+            <div class="tags"><span>口诀闯关</span><span>听算</span><span>限时挑战</span></div>
+          </div>
+        </div>
+
+        <!-- 板块四 -->
+        <div class="panel p4" onclick="App.go('plan')">
+          <div class="art">
+            <svg viewBox="0 0 300 320" preserveAspectRatio="xMidYMid slice">
+              <rect width="300" height="320" fill="#150d20"/>
+              <polygon points="0,256 66,206 132,240 200,182 300,238 300,320 0,320" fill="#0f0918"/>
+              <g transform="translate(150 116)">
+                <circle r="72" fill="rgba(180,92,255,.14)"/>
+                <polygon points="0,-64 56,-32 56,32 0,64 -56,32 -56,-32" fill="#221338" stroke="#b45cff" stroke-width="2.5"/>
+                <polygon points="0,-64 56,-32 0,0" fill="#331d52"/>
+                <polygon points="0,0 56,32 0,64" fill="#1a0e2b"/>
+                <g stroke="#e0b3ff" stroke-width="2.5" fill="none">
+                  <path d="M-26 4 l16 16 l34 -38"/>
+                </g>
+              </g>
+              <g fill="#ffd98a">
+                <polygon points="60,208 64,220 76,220 66,228 70,240 60,232 50,240 54,228 44,220 56,220"/>
+                <polygon points="240,196 243,205 252,205 245,211 248,220 240,214 232,220 235,211 228,205 237,205" opacity=".8"/>
+              </g>
+              <g stroke="rgba(224,179,255,.4)" stroke-width="1.5" fill="none">
+                <path d="M60 208 L150 116 L240 196"/>
+              </g>
+            </svg>
+          </div>
+          <div class="veil"></div>
+          <div class="stat"><b id="s4">0</b><i>今日完成</i></div>
+          <div class="meta">
+            <div class="idx">CHAPTER IV</div>
+            <h3>学徒计划</h3>
+            <p class="sub">每日任务、连续打卡与徽章<br>完成计划解锁学堂荣誉</p>
+            <div class="tags"><span>每日任务</span><span>打卡</span><span>徽章</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="daily">
+        <h4>今日进度</h4>
+        <div class="track"><i id="dailyBar" style="width:0%"></i></div>
+        <div class="val"><span id="dailyTxt">0 / 0</span></div>
+        <button class="btn-main" onclick="App.go('words')">开始训练</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 字词卡牌 ======== -->
+  <div class="view" id="v-words">
+    <div class="page">
+      <div class="pagehead">
+        <h2>字词卡牌</h2>
+        <div class="spacer"></div>
+        <div class="select-wrap">
+          <div class="seg" id="gradeSeg"></div>
+          <div class="seg" id="typeSeg"></div>
+          <div class="unit-cbs" id="unitCbs"></div>
+          <select class="lesson-sel" id="lessonSel" aria-label="选择课次"></select>
+          <button class="btn-ghost" onclick="Words.start(true)">重新开局</button>
+        </div>
+      </div>
+      <div class="word-stats" id="wordStats"></div>
+      <div class="card-stage" id="wordStage"></div>
+    </div>
+  </div>
+
+  <!-- ======== 我的书房（用户系统） ======== -->
+  <div class="view" id="v-user">
+    <div class="page">
+      <div class="pagehead"><h2>我的书房</h2></div>
+      <div id="userBody"></div>
+    </div>
+  </div>
+
+  <!-- ======== 错字熔炉 ======== -->
+  <div class="view" id="v-review">
+    <div class="page">
+      <div class="pagehead">
+        <h2>错字熔炉</h2>
+        <div class="spacer"></div>
+        <div class="select-wrap">
+          <div class="seg" id="reviewSeg">
+            <button data-m="read" class="on">识字错误</button>
+            <button data-m="write">听写错误</button>
+          </div>
+          <button class="btn-ghost" onclick="Review.showAdd()">手动添加</button>
+          <button class="btn-ghost" onclick="Review.clearMastered()">清除已掌握</button>
+        </div>
+      </div>
+      <div id="reviewBody"></div>
+    </div>
+  </div>
+
+  <!-- ======== 机械算室 ======== -->
+  <div class="view" id="v-math">
+    <div class="page">
+      <div class="pagehead">
+        <h2>机械算室</h2>
+        <div class="spacer"></div>
+        <button class="btn-ghost" onclick="MathLab.home()">选择模式</button>
+      </div>
+      <div id="mathBody"></div>
+    </div>
+  </div>
+
+  <!-- ======== 学徒计划 ======== -->
+  <div class="view" id="v-plan">
+    <div class="page">
+      <div class="pagehead"><h2>学徒计划</h2></div>
+      <div id="planBody"></div>
+    </div>
+  </div>
+
+  <!-- ======== 学习档案 ======== -->
+  <div class="view" id="v-archive">
+    <div class="page">
+      <div id="archiveBody"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/pinyin.js?v=20260809c2"></script>
+<script src="js/data-words.min.js?v=20260809c7"></script>
+<script src="js/audio.js?v=20260811c13"></script>
+<script src="js/store.js?v=20260813c19"></script>
+<script src="js/session.js?v=20260813c17"></script>
+<script src="js/fx.js?v=20260811c12"></script>
+<script src="js/words.js?v=20260813c20"></script>
+<script src="js/review.js?v=20260813c17"></script>
+<script src="js/user.js?v=20260809b2"></script>
+<script src="js/math.js?v=20260813c17"></script>
+<script src="js/plan.js?v=20260809b2"></script>
+<script src="js/archive.js?v=20260809b2"></script>
+<script src="js/app.js?v=20260813c17"></script>
+<script>App.setSyncUrl(location.protocol+"//"+location.hostname+":3001")</script>
+<div class="sync-overlay" id="syncOverlay">
+  <div class="sync-panel">
+    <h3>☁ 云存档同步</h3>
+    <div class="sync-code-row"><span>我的同步码：</span><b id="mySyncCode">----</b><button class="btn-ghost" onclick="App.copySyncCode()" style="padding:3px 8px;font-size:10px">复制</button></div>
+    <div class="sync-input-row"><label>输入对方同步码：</label><input id="syncCodeInput" maxlength="6" placeholder="六位数字" class="dict-input" style="width:80px;text-align:center;font-size:20px;letter-spacing:8px"></div>
+    <div class="sync-acts"><button class="btn-main" onclick="App.syncUpload()">⬆ 上传存档</button><button class="btn-main" onclick="App.syncDownload()">⬇ 下载存档</button></div>
+    <div id="syncMsg" style="margin-top:12px;font-size:12px;color:var(--gold-2)"></div>
+
+    <button class="btn-main ghost" onclick="document.getElementById('syncOverlay').style.display='none'" style="margin-top:16px;width:100%">关闭</button>
+  </div>
+</div>
+</body>
+</html>

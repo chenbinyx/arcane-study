@@ -1,0 +1,14 @@
+# 测试与参考脚本（不上 GitHub Pages）
+_ref/
+
+# 备份文件
+*.bak
+*.bak2
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# node
+node_modules/
+package-lock.json
