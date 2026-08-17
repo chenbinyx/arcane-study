@@ -1,0 +1,29 @@
+{
+  "name": "海克斯学堂 · ARCANE ACADEMY",
+  "short_name": "海克斯学堂",
+  "description": "字词卡牌、机械算室、错字熔炉——小学语文与数学训练",
+  "start_url": "/arcane-study/",
+  "scope": "/arcane-study/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf7e7",
+  "theme_color": "#0b0f17",
+  "icons": [
+    {
+      "src": "img/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "img/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "img/icons/icon-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
