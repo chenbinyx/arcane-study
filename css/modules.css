@@ -429,3 +429,23 @@
 .wc-glyph .wc-py { font-size: 10px; color: rgba(232,217,187,.7); margin-top: 2px; }
 .wc-empty { font-size: 12px; color: rgba(232,217,187,.55); padding: 6px 2px; }
 
+
+/* ============ 通用计时器（字词卡牌 / 机械算室） ============ */
+.timer-btn.on { color: var(--gold); border-color: var(--gold); background: rgba(242,183,78,.14); }
+.timer-panel {
+  display: none; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 14px; padding: 10px 16px; border-radius: 10px;
+  border: 1px solid rgba(242,183,78,.34);
+  background: linear-gradient(135deg, rgba(242,183,78,.10), rgba(85,214,255,.08));
+  box-shadow: 0 0 0 1px rgba(242,183,78,.06), 0 8px 22px rgba(0,0,0,.32);
+  animation: timerIn .28s ease;
+}
+@keyframes timerIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.timer-disp {
+  font-family: var(--serif); font-size: 30px; letter-spacing: 4px; color: var(--gold);
+  min-width: 104px; text-align: center; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 18px rgba(242,183,78,.4);
+}
+.timer-panel .btn-ghost { padding: 6px 14px; font-size: 12px; letter-spacing: 1px; }
+.timer-panel .btn-ghost:hover { color: #fff; border-color: var(--gold); }
+
