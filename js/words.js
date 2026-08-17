@@ -500,6 +500,13 @@ var Words = (function () {
           '<div class="hud-box"><i>第 ' + (state.i + 1) + ' / ' + state.queue.length + ' 张' + (state.extraCount ? '<span style="color:var(--gold-2);font-size:10px;margin-left:4px">含熔炉复习</span>' : '') + '</i><b id="accVal">' +
             (state.right + state.wrong ? Math.round(state.right / (state.right + state.wrong) * 100) : 100) + '%</b></div>' +
           '<div class="hud-box"><i>剩余</i><b id="remainVal">' + (state.queue.length - state.i) + '</b><span style="font-size:10px;color:rgba(232,217,187,.55);margin-left:3px">张</span></div>' +
+          '<div class="hud-box hud-timer"><i>计时</i><b id="timerDisp-words">00:00</b>' +
+            '<span class="hud-timer-ctrls">' +
+              '<button class="hud-tbtn" id="timerStart-words" onclick="Timer.start(\'words\')">开始</button>' +
+              '<button class="hud-tbtn" id="timerPause-words" style="display:none" onclick="Timer.pause(\'words\')">暂停</button>' +
+              '<button class="hud-tbtn" onclick="Timer.reset(\'words\')">重置</button>' +
+            '</span>' +
+          '</div>' +
         '</div>' +
         '<div class="quiz-row">' +
           '<div class="card-slot">' +
@@ -510,6 +517,7 @@ var Words = (function () {
         controlsHtml +
       '</div>';
 
+    if (window.Timer) { Timer.update('words'); Timer.sync('words'); }
     Sfx.deal();
     state.locked = false;
     persistCards();
@@ -936,6 +944,13 @@ var Words = (function () {
         '<div class="hud-box"><i>SCORE</i><b id="scoreVal">' + dict.score + '</b></div>' +
         '<div class="hud-box"><i>COMBO</i><b id="comboVal">' + dict.combo + '</b></div>' +
         '<div class="hud-box"><i>已批改</i><b id="doneVal">' + gradedCount() + ' / ' + dict.queue.length + '</b></div>' +
+        '<div class="hud-box hud-timer"><i>计时</i><b id="timerDisp-words">00:00</b>' +
+          '<span class="hud-timer-ctrls">' +
+            '<button class="hud-tbtn" id="timerStart-words" onclick="Timer.start(\'words\')">开始</button>' +
+            '<button class="hud-tbtn" id="timerPause-words" style="display:none" onclick="Timer.pause(\'words\')">暂停</button>' +
+            '<button class="hud-tbtn" onclick="Timer.reset(\'words\')">重置</button>' +
+          '</span>' +
+        '</div>' +
       '</div>' +
       '<div class="sheet-head">' +
         '<h3>听写答案 · 请逐个批改</h3>' +
@@ -948,6 +963,7 @@ var Words = (function () {
         '<button class="btn-main ghost" onclick="Words.dictAllRight()">全部写对</button>' +
         '<button class="btn-main" id="sheetDone" onclick="Words.dictSummary()">完成批改</button>' +
       '</div>';
+    if (window.Timer) { Timer.update('words'); Timer.sync('words'); }
     document.getElementById('sheet').addEventListener('click', function (e) {
       var b = e.target.closest('.mk'); if (!b) return;
       mark(parseInt(b.dataset.i, 10), b.dataset.v === '1', b);

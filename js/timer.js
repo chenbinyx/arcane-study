@@ -79,7 +79,7 @@ var Timer = (function () {
     if (p) p.style.display = st.running ? '' : 'none';
   }
   return {
-    start: start, pause: pause, reset: reset, toggle: toggle,
+    start: start, pause: pause, reset: reset, toggle: toggle, sync: sync,
     fmt: fmt, update: update,
     getState: function (key) { return ensure(key); },
     setState: function (key, st) { states[key] = st; },

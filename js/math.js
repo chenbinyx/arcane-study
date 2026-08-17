@@ -273,18 +273,26 @@ var MathLab = (function () {
     var q = quiz.q, listen = quiz.kind === 'listen', exprHtml = q.expr;
 
     var hud;
+    var timerBox =
+      '<div class="hud-box hud-timer"><i>计时</i><b id="timerDisp-math">00:00</b>' +
+        '<span class="hud-timer-ctrls">' +
+          '<button class="hud-tbtn" id="timerStart-math" onclick="Timer.start(\'math\')">开始</button>' +
+          '<button class="hud-tbtn" id="timerPause-math" style="display:none" onclick="Timer.pause(\'math\')">暂停</button>' +
+          '<button class="hud-tbtn" onclick="Timer.reset(\'math\')">重置</button>' +
+        '</span>' +
+      '</div>';
     if (quiz.kind === 'mul') {
       hud =
         '<div class="hud-box"><i>第 ' + (quiz.stage + 1) + ' 关</i><b style="color:#f2b74e;font-size:12px">' + stageDesc(quiz.stage) + '</b></div>' +
         '<div class="hud-box"><i>剩</i><b id="mProg">' + (quiz.mDeck.length + quiz.mRetry.length + 1) + '</b></div>' +
         '<div class="hud-box"><i>重练</i><b id="mRetry" style="color:#ff9d5c">' + quiz.mRetry.length + '</b></div>' +
         '<div class="hud-box"><i>SCORE</i><b id="mScore">' + quiz.score + '</b></div>' +
-        '<div class="hud-box"><i>COMBO</i><b id="mCombo" style="color:#ff5fd0">' + quiz.combo + '</b></div>';
+        '<div class="hud-box"><i>COMBO</i><b id="mCombo" style="color:#ff5fd0">' + quiz.combo + '</b></div>' + timerBox;
     } else {
       hud =
         '<div class="hud-box"><i>SCORE</i><b id="mScore">' + quiz.score + '</b></div>' +
         '<div class="hud-box"><i>COMBO</i><b id="mCombo" style="color:#ff5fd0">' + quiz.combo + '</b></div>' +
-        '<div class="hud-box"><i>进度</i><b>' + (quiz.i + 1) + '/' + quiz.total + '</b></div>';
+        '<div class="hud-box"><i>进度</i><b>' + (quiz.i + 1) + '/' + quiz.total + '</b></div>' + timerBox;
     }
 
     host.innerHTML =
@@ -300,6 +308,7 @@ var MathLab = (function () {
             }).join('') + '</div>'
         ) +
       '</div>';
+    if (window.Timer) { Timer.update('math'); Timer.sync('math'); }
     /* render 重绘后重新挂载持续火焰 */
     if (quiz.combo >= 3) FX.comboFire(quiz.combo);
 
