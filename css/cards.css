@@ -14,9 +14,18 @@
 /* 镜头容器：所有震屏位移作用在这一层 */
 #camera { will-change: transform; transform-origin: 50% 45%; }
 
-/* 战斗信息条 */
+/* 战斗信息条：积分/Combo/进度/剩余/计时 始终同一行，不与计分板分两行 */
 .battle-hud {
-  display: flex; align-items: stretch; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;
+  display: flex; align-items: stretch; gap: 14px; margin-bottom: 20px; flex-wrap: nowrap; justify-content: center;
+}
+/* 窄屏：缩小横向间距 + 隐藏标签多余换行，保证整行不挤成两行 */
+@media (max-width: 768px) {
+  .battle-hud { gap: 7px; }
+  .hud-box { min-width: 0; padding: 8px 9px; }
+  .hud-box i { font-size: 9px; letter-spacing: 1px; margin-bottom: 3px; }
+  .hud-box b { font-size: 22px; }
+  .hud-box.hud-timer { min-width: 0; }
+  .hud-tbtn { padding: 2px 6px; font-size: 9px; }
 }
 .hud-box {
   min-width: 118px; padding: 10px 16px; text-align: center;
@@ -536,6 +545,28 @@
   .sspk { width: 38px; height: 38px; }
   .exam-paper, .exam-player { padding: 22px 16px; }
 }
+
+/* ============ 错字统计：固定页面最底部、横向单行、紧凑 ============ */
+.word-stats.word-stats-foot {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  margin: 0; border-radius: 0; padding: 8px 14px;
+  background: linear-gradient(180deg, rgba(8, 14, 26, .92), rgba(6, 10, 18, .96));
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, .35);
+  backdrop-filter: blur(4px);
+}
+.word-stats.word-stats-foot .wc-head {
+  margin-bottom: 0; align-items: center; gap: 12px; justify-content: flex-start;
+}
+.word-stats.word-stats-foot .wc-title { font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
+.word-stats.word-stats-foot .wc-today { white-space: nowrap; }
+.word-stats.word-stats-foot .wc-row { flex-wrap: nowrap; overflow-x: auto; gap: 6px; }
+.word-stats.word-stats-foot .wc-chip {
+  flex: 0 0 auto; min-width: 44px; padding: 4px 8px; border-radius: 7px;
+}
+.word-stats.word-stats-foot .wc-d { font-size: 10px; }
+.word-stats.word-stats-foot .wc-n { font-size: 16px; }
+.word-stats.word-stats-foot .wc-detail { margin-top: 8px; }
 
 /* ==================== 连对火焰（粒子爆发） ==================== */
 .flame {

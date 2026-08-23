@@ -194,6 +194,8 @@ body::before {
 .view { display: none; }
 .view.on { display: block; }
 .page { padding: 14px 26px 10px; max-width: 1240px; margin: 0 auto; width: 100%; }
+/* 错字统计锚定底部时，给页面留出底部空间避免遮挡 */
+#v-words .page { padding-bottom: 78px; }
 .pagehead { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
 .pagehead h2 { margin: 0; font-family: var(--serif); font-size: 23px; letter-spacing: 6px; color: var(--gold-2); text-shadow: 2px 2px 0 rgba(0, 0, 0, .7); }
 .pagehead .spacer { flex: 1; }

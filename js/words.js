@@ -345,6 +345,7 @@ var Words = (function () {
   function renderStats() {
     var host = document.getElementById('wordStats');
     if (!host) return;
+    host.classList.add('word-stats-foot');
     var rows = Store.wrongByDay(7);
     var todayN = Store.todayWrong();
     var chips = rows.map(function (r) {
