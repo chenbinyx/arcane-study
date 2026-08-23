@@ -499,10 +499,14 @@ var Words = (function () {
     if (!isIdiom) {
       if (isPoly) opts = shuffle((item.opts || []).slice());
       else {
-        /* 终极兜底：若题库全查不到拼音，绝不让选项空白（降级显示汉字本身，并留痕便于排查） */
-        if (!right && item.c) {
-          try { console.warn('[arcane] 错字「' + item.c + '」在全部年级题库中均未找到拼音，已降级显示汉字'); } catch (e) {}
-          right = item.c;
+        /* 拼音补全：单字直接查；词组(多字错字)拆成单字逐个查，取首个能查到的字读音
+           这样既支持"天空"这类词组错字，也保证一定能出拼音选项，绝不退化成显示汉字 */
+        if (!right && item.c) right = lookupPinyin(item.c);
+        if (!right && item.c && item.c.length > 1) {
+          for (var ci = 0; ci < item.c.length; ci++) {
+            var one = lookupPinyin(item.c.charAt(ci));
+            if (one) { right = one; break; }
+          }
         }
         conf = right ? Pinyin.confuse(right) : { text: '', kind: '' };
         opts = Math.random() < 0.5 ? [right, conf.text] : [conf.text, right];

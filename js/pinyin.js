@@ -183,16 +183,22 @@
     return { text: compose(p.base, t), kind: '声调' };
   }
 
-  /* 为一个带调音节生成一个易混音节 */
+  /* 为一个带调音节生成一个易混音节
+     优先级：家长指定的易混维度（前后鼻音/平翘舌/韵母，w>=8）强制独占；
+     只有当该音节在这些维度上确实没有合法易混点时，才退化为声调混淆。 */
   function confuseSyllable(syl) {
     if (!VALID) buildValid();
     var p = parse(syl);
     var vs = variants(p.base);
     if (vs.length) {
-      var v = pickWeighted(vs);
-      /* 高优先易混点必出；低优先的留 25% 机会走声调混淆，保持题目多样 */
-      if (v && (v.w >= 8 || Math.random() < 0.75)) {
-        return { text: compose(v.base, p.tone), kind: v.kind };
+      var top = vs.filter(function (v) { return v.w >= 8; });
+      var pool = top.length ? top : vs;
+      var v = pickWeighted(pool);
+      if (v) {
+        /* top 存在时强制用易混点（不退化声调）；仅低权重易混点才允许 25% 走声调 */
+        if (top.length || Math.random() < 0.75) {
+          return { text: compose(v.base, p.tone), kind: v.kind };
+        }
       }
     }
     return toneVariant(p);
@@ -215,6 +221,7 @@
     var copy = parts.slice();
     copy[i] = r.text;
     var text = copy.join(' ');
+    /* 若易混点恰好等于原音（极少见：合法音节库里无对应易混音），强制改用声调变体 */
     if (text === pinyin) {
       var p = parse(parts[i]);
       copy[i] = compose(p.base, p.tone === 4 ? 1 : p.tone + 1);
