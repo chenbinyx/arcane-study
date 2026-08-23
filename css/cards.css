@@ -546,14 +546,9 @@
   .exam-paper, .exam-player { padding: 22px 16px; }
 }
 
-/* ============ 错字统计：固定在页面最底部（不遮挡选项） ============ */
+/* ============ 错字统计：置于字词选项下方，与普通板块同款间隙 ============ */
 .word-stats.word-stats-foot {
-  position: sticky; bottom: 0; z-index: 40;
-  margin: 14px 0 0; border-radius: 12px 12px 0 0; padding: 8px 14px;
-  background: linear-gradient(180deg, rgba(8, 14, 26, .92), rgba(6, 10, 18, .96));
-  border-top: 1px solid var(--line);
-  box-shadow: 0 -6px 18px rgba(0, 0, 0, .35);
-  backdrop-filter: blur(4px);
+  margin-top: 20px; /* 与上方字词选项保持和其他板块一致的间隙 */
 }
 .word-stats.word-stats-foot .wc-head {
   margin-bottom: 0; align-items: center; gap: 12px; justify-content: flex-start;
