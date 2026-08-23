@@ -671,9 +671,11 @@ var Sfx = (function () {
       return;
     }
     /* 降级：Web Speech 逐短语 */
+    /* onend 看门狗：整句超时强制完成，避免某一短语的 onend 丢失导致整链卡死 */
+    var guardedDone = watchdogDone(fullText, onDone);
     function step() {
       if (my !== phraseSeq) return;
-      if (i >= phrases.length) { if (onDone) onDone(); return; }
+      if (i >= phrases.length) { if (guardedDone) guardedDone(); return; }
       var p = phrases[i++];
       var voice = voiceFor(profile);
       var u = new SpeechSynthesisUtterance(p.text);
@@ -688,6 +690,24 @@ var Sfx = (function () {
       speechSynthesis.speak(u);
     }
     step();
+  }
+
+  /* ── onend 看门狗 ──
+     iOS/Safari 的 Web Speech 经常不回调 onend（切后台后返回、语音列表未就绪、
+     被其它朗读 cancel 等），依赖回调的"继续"按钮会永远不亮，界面卡死。
+     按文本长度估算朗读时长，超时强制视为播完。 */
+  function watchdogDone(text, onDone) {
+    if (!onDone) return null;
+    var done = false;
+    var est = Math.max(3500, (text || '').length * 500 + 2500);
+    var timer = setTimeout(function () {
+      if (done) return;
+      done = true; onDone();
+    }, est);
+    return function () {
+      if (done) return;
+      done = true; clearTimeout(timer); onDone();
+    };
   }
 
   /* ── 底层 say：Web Speech API 降级引擎（供无预生成文件的文本使用） ── */
@@ -705,7 +725,7 @@ var Sfx = (function () {
         u2.rate = opt.rate != null ? opt.rate : PROFILES[prof].rate;
         u2.pitch = opt.pitch != null ? opt.pitch : PROFILES[prof].pitch;
         u2.volume = opt.volume == null ? 1 : opt.volume;
-        if (opt.onend) u2.onend = opt.onend;
+        if (opt.onend) u2.onend = watchdogDone(text, opt.onend);
         speechSynthesis.speak(u2);
       } else {
         phraseChain(text, prof,

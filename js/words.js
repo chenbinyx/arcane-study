@@ -249,7 +249,7 @@ var Words = (function () {
         extras = shuffle(extras).slice(0, 5);
         extras.forEach(function (m) {
           state.queue.push({
-            c: m.c, p: m.p, w: m.w || [], s: m.s || '',
+            c: m.c, p: lookupPinyin(m.c) || m.p, w: m.w || [], s: m.s || '',
             kind: m.c.length > 1 ? 'ci' : 'zi', lesson: '熔炉复习',
             isReview: true
           });
@@ -406,6 +406,7 @@ var Words = (function () {
     if (tip) tip.textContent = '正在播放标准范读…';
     Sfx.idiomRead(item.c, function () {
       if (tok !== fanTok) return;
+      state.locked = false; /* 播完即解锁：范读可重听，不会卡死 */
       if (fanBtn) { fanBtn.classList.remove('playing'); fanBtn.textContent = '🔊 听范读'; }
       if (tip) tip.textContent = '1 秒后自动下一张…';
       setTimeout(function () {
@@ -686,10 +687,16 @@ var Words = (function () {
     setTimeout(function () {
       /* 用预生成 AI 语音（edge-tts 微软神经网络）朗读：字 + 组词 + 成语，
          有感情的语调，播完才亮起"继续"按钮 */
-      Sfx.teacherRead([item.c], "", function () {
+      var lit = false;
+      function lightNext() {
+        if (lit) return; lit = true;
         var btn = document.getElementById("corrNext");
         if (btn) { btn.classList.remove("disabled"); btn.setAttribute("onclick", "Words.next()"); btn.textContent = "记住了，继续"; }
-      });
+      }
+      /* 稳定性兜底：语音回调 8 秒内未到（网络慢 / 语音引擎异常）也强制放行，
+         绝不让孩子卡死在"播放完语音后继续" */
+      var guard = setTimeout(lightNext, 8000);
+      Sfx.teacherRead([item.c], "", function () { clearTimeout(guard); lightNext(); });
     }, 400);
   }
 

@@ -4,6 +4,26 @@ var Review = (function () {
   var mode = 'read';  /* read=识字错误, write=听写错误 */
   var quiz = null;
 
+  /* 拼音兜底：手动添加常不填拼音，自动从识字表/词语表查补，保证卡片与复习能正常显示读音 */
+  function fillPinyin(c, p) {
+    if (p && p.trim()) return p.trim();
+    try {
+      var bank = (window.WORD_BANK && (window.WORD_BANK[Store.get().grade] || window.WORD_BANK['1a']));
+      if (bank) {
+        var secs = ['shizi', 'cihui', 'idioms', 'xiezi'];
+        for (var s = 0; s < secs.length; s++) {
+          var groups = bank[secs[s]] || {};
+          for (var lab in groups) {
+            var arr = groups[lab];
+            if (!arr || !arr.length) continue;
+            for (var i = 0; i < arr.length; i++) if (arr[i].c === c) return arr[i].p || '';
+          }
+        }
+      }
+    } catch (e) {}
+    return '';
+  }
+
   function bindSeg() {
     var seg = document.getElementById('reviewSeg');
     if (seg.dataset.built) return;
@@ -106,7 +126,7 @@ var Review = (function () {
       '<button class="del" onclick="Review.del(event,\'' + m.c + '\')">✕</button>' +
       '<button class="type-btn" onclick="Review.toggleType(event,\'' + m.c + '\')" style="color:' + typeColor + '">' + typeLbl + '</button>' +
       '<div class="g' + (m.c.length > 1 ? ' small' : '') + '">' + m.c + '</div>' +
-      '<div class="p">' + m.p + '</div>' +
+      '<div class="p">' + fillPinyin(m.c, m.p) + '</div>' +
       '<div class="n">错 ' + m.wrong + ' 次 · 已练对 ' + m.right + '/3</div>' +
       '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
     '</div>';
@@ -165,7 +185,7 @@ var Review = (function () {
   function reviewStep() {
     var host = document.getElementById('reviewBody');
     if (quiz.i >= quiz.pool.length) return reviewSummary(host);
-    var m = quiz.pool[quiz.i], right = m.p;
+    var m = quiz.pool[quiz.i], right = fillPinyin(m.c, m.p);
     var conf = Pinyin.confuse(right);
     var opts = Math.random() < 0.5 ? [right, conf.text] : [conf.text, right];
 
@@ -328,7 +348,7 @@ var Review = (function () {
     }
     if (!order.length) { App.toast('没有识别到汉字'); return; }
     order.forEach(function (c) {
-      Store.manualAdd({ c: c, p: p, w: w, s: s, type: type });
+      Store.manualAdd({ c: c, p: fillPinyin(c, p), w: w, s: s, type: type });
     });
     Sfx.tick();
     App.toast('已添加 ' + order.length + ' 个字：' + order.join(' '));

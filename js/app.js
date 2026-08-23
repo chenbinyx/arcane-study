@@ -4,6 +4,24 @@ var App = (function () {
   var cur = 'home';
   var SYNC = ''; // 云同步服务器地址
 
+  /* ============ 页面记忆：刷新 / 误触下拉刷新 / 重开 app 不再踢回首页 ============ */
+  var VIEW_KEY = 'arcane_last_view';
+  function saveView(v) {
+    try { localStorage.setItem(VIEW_KEY, JSON.stringify({ v: v, ts: Date.now() })); } catch (e) {}
+  }
+  function restoreView() {
+    try {
+      var raw = localStorage.getItem(VIEW_KEY);
+      if (!raw) return;
+      var o = JSON.parse(raw);
+      if (!o || !o.v || o.v === 'home' || o.v === cur) return;
+      /* 只恢复 6 小时内的上次页面，避免隔天打开直接跳进训练页 */
+      if (Date.now() - (o.ts || 0) > 6 * 3600 * 1000) return;
+      if (!document.getElementById('v-' + o.v)) return;
+      go(o.v);
+    } catch (e) {}
+  }
+
   function go(v) {
     document.onkeydown = null;
     /* 离开字词页时停掉听写 */
@@ -15,6 +33,7 @@ var App = (function () {
     if (!target) v = 'home', target = document.getElementById('v-home');
     target.classList.add('on');
     cur = v;
+    saveView(v); /* 记住当前页面：刷新后接着回来 */
     window.scrollTo({ top: 0, behavior: 'smooth' });
     Sfx.unlock();
 
@@ -120,6 +139,7 @@ var App = (function () {
     syncHud();
     syncHome();
     applyEye();
+    restoreView(); /* 回到上次训练的页面（6 小时内有效） */
 
     /* 首次交互解锁音频 */
     var unlock = function () { Sfx.unlock(); document.removeEventListener('pointerdown', unlock); };

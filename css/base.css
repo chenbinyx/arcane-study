@@ -27,9 +27,13 @@ html, body {
   color: var(--parch);
   font-family: var(--sans);
   overflow-x: hidden; overflow-y: auto;
+  /* 稳定性：阻止移动端"下拉整页刷新"误触（一刷新就被踢回首页） */
+  overscroll-behavior-y: contain;
 }
 
 body {
+  /* 稳定性：去掉双击缩放检测延迟，点按响应更快更跟手 */
+  touch-action: manipulation;
   background:
     radial-gradient(1200px 700px at 50% -18%, rgba(85, 214, 255, .16), transparent 62%),
     radial-gradient(900px 620px at 12% 108%, rgba(180, 92, 255, .16), transparent 60%),
