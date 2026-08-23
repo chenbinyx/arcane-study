@@ -4,19 +4,22 @@ var Review = (function () {
   var mode = 'read';  /* read=识字错误, write=听写错误 */
   var quiz = null;
 
-  /* 拼音兜底：手动添加常不填拼音，自动从识字表/词语表查补，保证卡片与复习能正常显示读音 */
+  /* 拼音兜底：手动添加常不填拼音，自动从识字表/词语表查补（遍历所有年级），保证卡片与复习能正常显示读音 */
   function fillPinyin(c, p) {
     if (p && p.trim()) return p.trim();
     try {
-      var bank = (window.WORD_BANK && (window.WORD_BANK[Store.get().grade] || window.WORD_BANK['1a']));
-      if (bank) {
+      var WB = window.WORD_BANK;
+      if (WB) {
         var secs = ['shizi', 'cihui', 'idioms', 'xiezi'];
-        for (var s = 0; s < secs.length; s++) {
-          var groups = bank[secs[s]] || {};
-          for (var lab in groups) {
-            var arr = groups[lab];
-            if (!arr || !arr.length) continue;
-            for (var i = 0; i < arr.length; i++) if (arr[i].c === c) return arr[i].p || '';
+        for (var gk in WB) {
+          var bank = WB[gk]; if (!bank) continue;
+          for (var s = 0; s < secs.length; s++) {
+            var groups = bank[secs[s]] || {};
+            for (var lab in groups) {
+              var arr = groups[lab];
+              if (!arr || !arr.length) continue;
+              for (var i = 0; i < arr.length; i++) if (arr[i].c === c) return arr[i].p || '';
+            }
           }
         }
       }

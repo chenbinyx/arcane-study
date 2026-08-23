@@ -327,16 +327,20 @@ var Words = (function () {
   var statsSel = null;                       /* 当前展开的日期 key（null=收起） */
   function lookupPinyin(c) {
     try {
-      var g = Store.get();
-      var bank = (window.WORD_BANK && window.WORD_BANK[g.grade]) || (window.WORD_BANK && window.WORD_BANK['1a']);
-      if (!bank) return '';
+      var WB = window.WORD_BANK;
+      if (!WB) return '';
       var secs = ['shizi', 'cihui', 'idioms', 'xiezi'];
-      for (var s = 0; s < secs.length; s++) {
-        var groups = bank[secs[s]] || {};
-        for (var lab in groups) {
-          var arr = groups[lab];
-          if (!arr || !arr.length) continue;
-          for (var i = 0; i < arr.length; i++) if (arr[i].c === c) return arr[i].p || '';
+      /* 遍历所有年级，确保任意年级的错字都能补全拼音（不只当前年级） */
+      for (var gk in WB) {
+        var bank = WB[gk];
+        if (!bank) continue;
+        for (var s = 0; s < secs.length; s++) {
+          var groups = bank[secs[s]] || {};
+          for (var lab in groups) {
+            var arr = groups[lab];
+            if (!arr || !arr.length) continue;
+            for (var i = 0; i < arr.length; i++) if (arr[i].c === c) return arr[i].p || '';
+          }
         }
       }
     } catch (e) {}
