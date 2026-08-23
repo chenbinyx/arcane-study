@@ -516,9 +516,11 @@ var Words = (function () {
           '<div id="afterSlot"></div>' +
         '</div>' +
         controlsHtml +
+        '<div class="word-stats" id="wordStats"></div>' +
       '</div>';
 
     if (window.Timer) { Timer.update('words'); Timer.sync('words'); }
+    renderStats(); /* 每帧把错字统计渲染到选项下方 */
     Sfx.deal();
     state.locked = false;
     persistCards();
