@@ -26,6 +26,49 @@ var Words = (function () {
     return WORD_BANK[g.grade] || WORD_BANK['1a'];
   }
 
+  /* 全题库拼音索引：扫描全部年级所有 section（含 poly 多音字），建立 字→拼音 映射。
+     同一字多音时取首个读音。用于错字拼音兜底，覆盖率接近 100%，避免任何错字显示空白。 */
+  var _pyIndex = null;
+  function buildPinyinIndex() {
+    if (_pyIndex) return _pyIndex;
+    var map = {};
+    var WB = window.WORD_BANK;
+    if (!WB) return map;
+    function set(c, p) {
+      if (!c || !p) return;
+      if (!map[c]) map[c] = p;  // 首见读音优先
+    }
+    for (var gk in WB) {
+      var bank = WB[gk]; if (!bank) continue;
+      ['shizi', 'cihui', 'idioms', 'xiezi'].forEach(function (sec) {
+        var groups = bank[sec] || {};
+        for (var lab in groups) {
+          var arr = groups[lab];
+          if (!arr || !arr.length) continue;
+          arr.forEach(function (s) {
+            if (!s || typeof s !== 'object') return;
+            set(s.c, s.p);
+            if (Array.isArray(s.w)) s.w.forEach(function (ww) { if (ww && ww.length === 1) set(ww, s.p); });
+          });
+        }
+      });
+      /* 多音字：每个读音都建索引（同字多音首个优先，其余也记录） */
+      var poly = bank.poly;
+      if (poly && poly.length) {
+        poly.forEach(function (it) {
+          if (!it || !it.c) return;
+          (it.r || []).forEach(function (rd) { if (rd && rd.p) set(it.c, rd.p); });
+        });
+      }
+    }
+    _pyIndex = map;
+    return map;
+  }
+  function indexPinyin(c) {
+    var idx = buildPinyinIndex();
+    return idx[c] || '';
+  }
+
   /* ---------- 取题库（按类型 + 课次 + 单元） ---------- */
   function lessonsOf(t) {
     var b = gradeBank(), def = typeDef(t);
@@ -326,11 +369,14 @@ var Words = (function () {
   /* 按天错字统计面板（顶部常驻，游戏过程中实时刷新）；点日期格可展开看具体是哪些字 */
   var statsSel = null;                       /* 当前展开的日期 key（null=收起） */
   function lookupPinyin(c) {
+    /* 优先走全题库索引（覆盖 poly 多音字、所有年级、组词首字），覆盖率最高 */
+    var idx = indexPinyin(c);
+    if (idx) return idx;
+    /* 兜底：原遍历逻辑（兼容仅出现在组词/例句里的字） */
     try {
       var WB = window.WORD_BANK;
       if (!WB) return '';
       var secs = ['shizi', 'cihui', 'idioms', 'xiezi'];
-      /* 遍历所有年级，确保任意年级的错字都能补全拼音（不只当前年级） */
       for (var gk in WB) {
         var bank = WB[gk];
         if (!bank) continue;
@@ -339,7 +385,12 @@ var Words = (function () {
           for (var lab in groups) {
             var arr = groups[lab];
             if (!arr || !arr.length) continue;
-            for (var i = 0; i < arr.length; i++) if (arr[i].c === c) return arr[i].p || '';
+            for (var i = 0; i < arr.length; i++) {
+              if (!arr[i] || typeof arr[i] !== 'object') continue;
+              if (arr[i].c === c) return arr[i].p || '';
+              var ww = Array.isArray(arr[i].w) ? arr[i].w : [];
+              for (var k = 0; k < ww.length; k++) if (ww[k] === c) return arr[i].p || '';
+            }
           }
         }
       }
@@ -448,6 +499,11 @@ var Words = (function () {
     if (!isIdiom) {
       if (isPoly) opts = shuffle((item.opts || []).slice());
       else {
+        /* 终极兜底：若题库全查不到拼音，绝不让选项空白（降级显示汉字本身，并留痕便于排查） */
+        if (!right && item.c) {
+          try { console.warn('[arcane] 错字「' + item.c + '」在全部年级题库中均未找到拼音，已降级显示汉字'); } catch (e) {}
+          right = item.c;
+        }
         conf = right ? Pinyin.confuse(right) : { text: '', kind: '' };
         opts = Math.random() < 0.5 ? [right, conf.text] : [conf.text, right];
       }
@@ -1136,6 +1192,7 @@ var Words = (function () {
     start: start, next: next, speakFix: speakFix, stop: stop,
     dictReplay: dictReplay, dictNext: dictNext, dictSkipToSheet: dictSkipToSheet,
     dictAllRight: dictAllRight, dictSay: dictSay, dictSummary: dictSummary,
-    flush: flush, toggleStats: toggleStats
+    flush: flush, toggleStats: toggleStats,
+    lookupPinyin: lookupPinyin   // 暴露给错字熔炉复用，保证两端拼音补全逻辑一致
   };
 })();

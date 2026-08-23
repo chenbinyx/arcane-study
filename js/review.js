@@ -7,6 +7,9 @@ var Review = (function () {
   /* 拼音兜底：手动添加常不填拼音，自动从识字表/词语表查补（遍历所有年级），保证卡片与复习能正常显示读音 */
   function fillPinyin(c, p) {
     if (p && p.trim()) return p.trim();
+    /* 优先复用字词卡牌的全题库拼音索引（覆盖 poly、所有年级、组词首字） */
+    try { if (window.Words && window.Words.lookupPinyin) { var lp = window.Words.lookupPinyin(c); if (lp) return lp; } } catch (e) {}
+    /* 兜底遍历（兼容仅出现在组词/例句里的字） */
     try {
       var WB = window.WORD_BANK;
       if (WB) {
@@ -18,7 +21,12 @@ var Review = (function () {
             for (var lab in groups) {
               var arr = groups[lab];
               if (!arr || !arr.length) continue;
-              for (var i = 0; i < arr.length; i++) if (arr[i].c === c) return arr[i].p || '';
+              for (var i = 0; i < arr.length; i++) {
+                if (!arr[i] || typeof arr[i] !== 'object') continue;
+                if (arr[i].c === c) return arr[i].p || '';
+                var ww = Array.isArray(arr[i].w) ? arr[i].w : [];
+                for (var k = 0; k < ww.length; k++) if (ww[k] === c) return arr[i].p || '';
+              }
             }
           }
         }
