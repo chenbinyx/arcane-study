@@ -128,16 +128,23 @@ var Review = (function () {
     return '<div class="hud-box" style="min-width:90px"><i>' + label + '</i><b style="color:' + (color || '#fff') + '">' + n + '</b></div>';
   }
 
+  function cardWords(m) {
+    var ws = (m.w && m.w.length) ? m.w : (window.Words && window.Words.lookupWords ? window.Words.lookupWords(m.c) : []);
+    return (ws && ws.length) ? ws.slice(0, 3) : [];
+  }
   function cardHtml(m) {
     var isRead = m.type === 'read' || (!m.type && m.src !== 'dictation' && m.src !== 'manual');
     var pct = Math.min(100, Math.round(m.right / 3 * 100));
     var typeLbl = isRead ? '识字' : '听写';
     var typeColor = isRead ? '#55d6ff' : '#ffa34e';
+    var cws = cardWords(m);
+    var wordsHtml = cws.length ? '<div class="cw">词 ' + cws.map(function (w0) { return '<span>' + w0 + '</span>'; }).join('') + '</div>' : '';
     return '<div class="mcard" data-k="' + m.c + '">' +
       '<button class="del" onclick="Review.del(event,\'' + m.c + '\')">✕</button>' +
       '<button class="type-btn" onclick="Review.toggleType(event,\'' + m.c + '\')" style="color:' + typeColor + '">' + typeLbl + '</button>' +
       '<div class="g' + (m.c.length > 1 ? ' small' : '') + '">' + m.c + '</div>' +
       '<div class="p">' + fillPinyin(m.c, m.p) + '</div>' +
+      wordsHtml +
       '<div class="n">错 ' + m.wrong + ' 次 · 已练对 ' + m.right + '/3</div>' +
       '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
     '</div>';
@@ -248,7 +255,8 @@ var Review = (function () {
         FX.comboFireReset();
         document.getElementById('rvCard').classList.add('miss');
         FX.shake('bad'); FX.strobe(true); Sfx.miss();
-        var words = (m.w && m.w.length ? m.w : [m.c]).slice(0, 3);
+        var words = (m.w && m.w.length ? m.w : (window.Words && window.Words.lookupWords ? window.Words.lookupWords(m.c) : [])).slice(0, 3);
+        if (!words.length) words = [m.c];
         document.getElementById('afterSlot').innerHTML =
           '<div class="correction"><div class="ct">读音记牢</div>' +
             '<div class="cr-row">' +

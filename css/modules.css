@@ -48,6 +48,8 @@
 .mcard .g { font-family: var(--serif); font-size: 40px; color: #fff; text-shadow: 3px 3px 0 rgba(0, 0, 0, .7); }
 .mcard .g.small { font-size: 27px; }
 .mcard .p { font-size: 13px; color: var(--gold-2); margin-top: 6px; font-family: var(--serif); letter-spacing: 1px; }
+.mcard .cw { font-size: 11px; color: rgba(125, 255, 155, .85); margin-top: 6px; letter-spacing: 1px; font-family: var(--serif); }
+.mcard .cw span { display: inline-block; margin: 0 4px; padding: 1px 6px; border: 1px solid rgba(125, 255, 155, .3); border-radius: 3px; }
 .mcard .n { font-size: 10px; letter-spacing: 2px; color: rgba(232, 217, 187, .45); margin-top: 8px; }
 .mcard .mdate { font-size: 10px; letter-spacing: 1px; color: rgba(232, 217, 187, .6); margin-top: 6px; }
 .mcard .msrc { display: inline-block; font-size: 9px; letter-spacing: 2px; color: var(--gold-2);

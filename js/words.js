@@ -69,6 +69,57 @@ var Words = (function () {
     return idx[c] || '';
   }
 
+  /* 组词索引：字 → 组词数组（从全题库 shizi/cihui/idioms 收集），用于错字卡片/复习题
+     在 m.w 为空时反查词语，保证"错字板块里始终有语音对应的词语" */
+  var _wordIndex = null;
+  function buildWordIndex() {
+    if (_wordIndex) return _wordIndex;
+    var map = {};
+    var WB = window.WORD_BANK;
+    if (!WB) { _wordIndex = map; return map; }
+    function add(c, ws) {
+      if (!c || !Array.isArray(ws) || !ws.length) return;
+      var arr = map[c] || (map[c] = []);
+      ws.forEach(function (w0) { if (w0 && arr.indexOf(w0) < 0) arr.push(w0); });
+    }
+    for (var gk in WB) {
+      var bank = WB[gk]; if (!bank) continue;
+      ['shizi', 'cihui', 'idioms'].forEach(function (sec) {
+        var groups = bank[sec] || {};
+        for (var lab in groups) {
+          var arr = groups[lab];
+          if (!arr || !arr.length) continue;
+          arr.forEach(function (s) {
+            if (!s || typeof s !== 'object') return;
+            if (s.c) add(s.c, s.w || []);
+            /* 词语表里的词，也把每个单字挂上该词，便于"只读错其中一个字"时反查 */
+            if (s.c && s.c.length > 1 && Array.isArray(s.w)) {
+              s.w.forEach(function (w0) { if (w0 && w0.length > 1) add(s.c, [w0]); });
+            }
+          });
+        }
+      });
+    }
+    _wordIndex = map;
+    return map;
+  }
+  function lookupWords(c) {
+    if (!c) return [];
+    var idx = buildWordIndex();
+    if (idx[c] && idx[c].length) return idx[c].slice();
+    /* 多字错字：逐字反查，拼接词语 */
+    if (c.length > 1) {
+      var out = [];
+      for (var i = 0; i < c.length; i++) {
+        var one = lookupPinyin(c.charAt(i));
+        var ws = idx[c.charAt(i)];
+        if (ws && ws.length) { ws.forEach(function (w0) { if (out.indexOf(w0) < 0) out.push(w0); }); }
+      }
+      if (out.length) return out;
+    }
+    return [];
+  }
+
   /* ---------- 取题库（按类型 + 课次 + 单元） ---------- */
   function lessonsOf(t) {
     var b = gradeBank(), def = typeDef(t);
@@ -292,7 +343,7 @@ var Words = (function () {
         extras = shuffle(extras).slice(0, 5);
         extras.forEach(function (m) {
           state.queue.push({
-            c: m.c, p: lookupPinyin(m.c) || m.p, w: m.w || [], s: m.s || '',
+            c: m.c, p: lookupPinyin(m.c) || m.p, w: (m.w && m.w.length ? m.w : lookupWords(m.c)), s: m.s || '',
             kind: m.c.length > 1 ? 'ci' : 'zi', lesson: '熔炉复习',
             isReview: true
           });
@@ -515,6 +566,7 @@ var Words = (function () {
     var glyph = isPoly ? (item.ctx || item.c) : (item.c || '');
     var glyphCls = glyph.length >= 4 ? 'w4' : glyph.length === 3 ? 'w3' : glyph.length === 2 ? 'w2' : '';
     var g = Store.get();
+    if (typeof window !== 'undefined' && window.__WORDS_DBG) console.log('DBG', JSON.stringify({c:item.c,p:item.p,right:right,kind:item.kind,isReview:item.isReview,opts:opts,conf:conf&&conf.kind,gt:g.wordType}));
     var gradeInfo = WORD_BANK[g.grade] || WORD_BANK['1a'];
     var typeName = { zi: '识字表', ci: '词语表', idiom: '成语', poly: '多音字' }[item.kind] || '识字表';
     if (isIdiom) Sfx.preloadVoice && Sfx.preloadVoice(item.c);
@@ -701,7 +753,8 @@ var Words = (function () {
   }
 
   function showCorrection(item, rightP) {
-    var words = (item.w && item.w.length ? item.w : [item.c]).slice(0, 3);
+    var words = (item.w && item.w.length ? item.w : lookupWords(item.c)).slice(0, 3);
+    if (!words.length) words = [item.c];
     var polyInfo = '';
     if (item.kind === 'poly') {
       /* 展示两个读音 + 各自组词 */
@@ -1197,6 +1250,7 @@ var Words = (function () {
     dictReplay: dictReplay, dictNext: dictNext, dictSkipToSheet: dictSkipToSheet,
     dictAllRight: dictAllRight, dictSay: dictSay, dictSummary: dictSummary,
     flush: flush, toggleStats: toggleStats,
-    lookupPinyin: lookupPinyin   // 暴露给错字熔炉复用，保证两端拼音补全逻辑一致
+    lookupPinyin: lookupPinyin,  // 暴露给错字熔炉复用，保证两端拼音补全逻辑一致
+    lookupWords: lookupWords      // 暴露给错字熔炉复用，错字 m.w 为空时反查组词
   };
 })();
