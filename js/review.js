@@ -296,29 +296,43 @@ var Review = (function () {
   function showAdd() {
     var host = document.getElementById('reviewBody');
     host.innerHTML = '<div class="card-block"><h4>手动添加错字</h4>' +
-      '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px">' +
-        '<label style="color:rgba(232,217,187,.7);font-size:13px">汉字<input class="dict-input" id="addChar" maxlength="3" placeholder="必填" style="width:100px;margin-left:6px"></label>' +
-        '<label style="color:rgba(232,217,187,.7);font-size:13px">拼音<input class="dict-input" id="addPy" maxlength="20" style="width:120px;margin-left:6px"></label>' +
-        '<label style="color:rgba(232,217,187,.7);font-size:13px">类型<select id="addType" style="margin-left:6px;padding:8px 10px;border:1px solid var(--line);background:rgba(20,32,51,.6);color:#fff;font-size:13px">' +
+      '<p style="font-size:12px;color:rgba(232,217,187,.55);margin:8px 0 12px">粘贴或输入一段文字，系统会按单个汉字逐个录入（重复的字只记一次）。例：<b style="color:var(--gold-2)">天地人我天地</b> → 天、地、人、我</p>' +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start">' +
+        '<label style="color:rgba(232,217,187,.7);font-size:13px;flex:1 1 260px">汉字 / 文本' +
+          '<textarea id="addChar" rows="3" placeholder="必填，可粘贴整段文字" style="width:100%;margin-top:6px;padding:10px;border:1px solid var(--line);border-radius:8px;background:rgba(20,32,51,.6);color:#fff;font-size:15px;resize:vertical"></textarea></label>' +
+        '<label style="color:rgba(232,217,187,.7);font-size:13px">拼音<input class="dict-input" id="addPy" maxlength="20" placeholder="可空，统一套用" style="width:120px;margin-top:6px"></label>' +
+        '<label style="color:rgba(232,217,187,.7);font-size:13px">类型<select id="addType" style="margin-top:6px;padding:8px 10px;border:1px solid var(--line);background:rgba(20,32,51,.6);color:#fff;font-size:13px">' +
           '<option value="read" selected>识字错误</option><option value="write">听写错误</option></select></label>' +
       '</div>' +
-      '<div style="margin-top:12px"><label style="color:rgba(232,217,187,.7);font-size:13px">组词（/分隔）<input class="dict-input" id="addWords" maxlength="80" style="width:260px;margin-left:6px"></label></div>' +
-      '<div style="margin-top:12px"><label style="color:rgba(232,217,187,.7);font-size:13px">例句<input class="dict-input" id="addSent" maxlength="120" style="width:300px;margin-left:6px"></label></div>' +
-      '<div style="margin-top:18px"><button class="btn-main" onclick="Review.doAdd()">确认</button> <button class="btn-main ghost" onclick="Review.render()">取消</button></div></div>';
+      '<div style="margin-top:12px"><label style="color:rgba(232,217,187,.7);font-size:13px">组词（/分隔，统一套用）<input class="dict-input" id="addWords" maxlength="80" style="width:260px;margin-left:6px"></label></div>' +
+      '<div style="margin-top:12px"><label style="color:rgba(232,217,187,.7);font-size:13px">例句（统一套用）<input class="dict-input" id="addSent" maxlength="120" style="width:300px;margin-left:6px"></label></div>' +
+      '<div style="margin-top:18px"><button class="btn-main" onclick="Review.doAdd()">确认添加</button> <button class="btn-main ghost" onclick="Review.render()">取消</button></div></div>';
     setTimeout(function () { var f = document.getElementById('addChar'); if (f) f.focus(); }, 100);
   }
 
   function doAdd() {
-    var c = (document.getElementById('addChar').value || '').trim();
-    if (!c) { App.toast('请输入汉字'); return; }
+    var raw = (document.getElementById('addChar').value || '').trim();
+    if (!raw) { App.toast('请先输入或粘贴文字'); return; }
     var p = (document.getElementById('addPy').value || '').trim();
     var wRaw = (document.getElementById('addWords').value || '').trim();
     var w = wRaw ? wRaw.split(/[/、，,]/) : [];
     var s = (document.getElementById('addSent').value || '').trim();
     var type = document.getElementById('addType').value;
-    Store.manualAdd({ c: c, p: p, w: w, s: s, type: type });
-    Sfx.tick(); App.toast('已添加：' + c);
-    Store.log('review', '手动添加', c);
+
+    /* 逐字拆分：仅提取汉字，按单字去重记录 */
+    var chars = {}, order = [];
+    for (var i = 0; i < raw.length; i++) {
+      var ch = raw.charAt(i);
+      if (!/[\u4E00-\u9FA5]/.test(ch)) continue;   /* 跳过标点 / 字母 / 数字 */
+      if (!chars[ch]) { chars[ch] = true; order.push(ch); }
+    }
+    if (!order.length) { App.toast('没有识别到汉字'); return; }
+    order.forEach(function (c) {
+      Store.manualAdd({ c: c, p: p, w: w, s: s, type: type });
+    });
+    Sfx.tick();
+    App.toast('已添加 ' + order.length + ' 个字：' + order.join(' '));
+    Store.log('review', '手动添加', order.join(''));
     render(); App.syncHud();
   }
 
