@@ -69,6 +69,54 @@ var Words = (function () {
     return idx[c] || '';
   }
 
+  /* 多音字提示表：字 → 该字的全部正确读音（去调后的"声韵"集合）。
+     用于判断"干扰项是不是该字另一个正确读音"——若是，则这道拼音题
+     会撞上多音字（两个选项都正确），需替换为纯声调区分题。
+     字库 poly 表里的多音字会自动并入，这里只补充字库未单列的常见多音字。 */
+  var _charPy = null;
+  var POLY_HINTS = { '似': ['sì', 'shì'], '的': ['de', 'dí', 'dì'], '地': ['dì', 'de'], '得': ['de', 'dé', 'děi'], '长': ['cháng', 'zhǎng'], '重': ['zhòng', 'chóng'], '行': ['xíng', 'háng'], '都': ['dōu', 'dū'], '好': ['hǎo', 'hào'], '了': ['le', 'liǎo'] };
+  function buildCharPinyins() {
+    if (_charPy) return _charPy;
+    var map = {};
+    function add(c, p) {
+      if (!c || !p) return;
+      var base = Pinyin.plain(p);
+      if (!base) return;
+      var arr = map[c] || (map[c] = []);
+      if (arr.indexOf(base) < 0) arr.push(base);
+    }
+    var WB = window.WORD_BANK;
+    if (WB) {
+      for (var gk in WB) {
+        var bank = WB[gk]; if (!bank) continue;
+        ['shizi', 'cihui', 'idioms', 'xiezi'].forEach(function (sec) {
+          var groups = bank[sec] || {};
+          for (var lab in groups) {
+            (groups[lab] || []).forEach(function (s) {
+              if (s && typeof s === 'object' && s.c) add(s.c, s.p);
+            });
+          }
+        });
+        /* 多音字表：每个读音都并入该字 */
+        (bank.poly || []).forEach(function (it) {
+          if (!it || !it.c) return;
+          add(it.c, it.p);
+          (it.r || []).forEach(function (rd) { if (rd && rd.p) add(it.c, rd.p); });
+        });
+      }
+    }
+    /* 并入提示表（去调后比较，故存 plain 形式） */
+    for (var c in POLY_HINTS) {
+      (POLY_HINTS[c] || []).forEach(function (p) { add(c, p); });
+    }
+    _charPy = map;
+    return map;
+  }
+  function charPinyins(c) {
+    var m = buildCharPinyins();
+    return m[c] || [];
+  }
+
   /* 组词索引：字 → 组词数组（从全题库 shizi/cihui/idioms 收集），用于错字卡片/复习题
      在 m.w 为空时反查词语，保证"错字板块里始终有语音对应的词语" */
   var _wordIndex = null;
@@ -560,6 +608,17 @@ var Words = (function () {
           }
         }
         conf = right ? Pinyin.confuse(right) : { text: '', kind: '' };
+        /* 多音字保护：若干扰项 conf.text 恰好是该字另一个正确读音（如"似"的 sì/shì），
+           两个选项都正确会让孩子困惑。此时丢弃易混维度，改为纯声调区分（同声韵换声调）。 */
+        if (right && conf.text && item.c && conf.text !== right) {
+          var cps = charPinyins(item.c);
+          if (cps.length > 1 && cps.indexOf(Pinyin.plain(conf.text)) >= 0) {
+            var pObj = Pinyin.parse(right);
+            var tones = [1, 2, 3, 4].filter(function (t) { return t !== pObj.tone; });
+            var nt = tones[Math.floor(Math.random() * tones.length)];
+            conf = { text: Pinyin.compose(pObj.base, nt), kind: '声调' };
+          }
+        }
         opts = Math.random() < 0.5 ? [right, conf.text] : [conf.text, right];
       }
     }
@@ -1251,6 +1310,7 @@ var Words = (function () {
     dictAllRight: dictAllRight, dictSay: dictSay, dictSummary: dictSummary,
     flush: flush, toggleStats: toggleStats,
     lookupPinyin: lookupPinyin,  // 暴露给错字熔炉复用，保证两端拼音补全逻辑一致
-    lookupWords: lookupWords      // 暴露给错字熔炉复用，错字 m.w 为空时反查组词
+    lookupWords: lookupWords,     // 暴露给错字熔炉复用，错字 m.w 为空时反查组词
+    charPinyins: charPinyins      // 暴露给 render：判断某字的多音集合，避免干扰项撞多音字
   };
 })();
