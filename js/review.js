@@ -1,8 +1,18 @@
-/* 错字熔炉：识字错误 / 听写错误 · 按日期分组 · 按日期复习 */
+/* 错字熔炉：识字错误 / 听写错误 · 按日期分组 · 按日期复习
+   设计要点：
+   1) 识字错误与听写错误各自独立存储（Store 中以 c|read / c|write 为键），删除/复习任一类互不影响；
+   2) 错字复习采用与"字词卡牌"一致的积分(SCORE)/连击(COMBO)/正确率 HUD + 计时器；
+      选错后该字会重新入队，让孩子再选一次（最多重练 3 次），纠错面板与字词卡牌一致（语音播完才亮"继续"）；
+   3) 错字记录按日期永久保存、不可删除；支持多选，把勾选的错字"添加到复习"。 */
 var Review = (function () {
   'use strict';
   var mode = 'read';  /* read=识字错误, write=听写错误 */
   var quiz = null;
+  var selOn = false;  /* 多选模式 */
+  var MAX_RETRY = 3;  /* 同一字单局最多重练次数（含首次） */
+
+  /* 存储键：字 + 类型，与 Store.keyOf 保持一致 */
+  function mkey(m) { return m.c + '|' + (m.type === 'write' ? 'write' : 'read'); }
 
   /* 拼音兜底：手动添加常不填拼音，自动从识字表/词语表查补（遍历所有年级），保证卡片与复习能正常显示读音 */
   function fillPinyin(c, p) {
@@ -75,8 +85,8 @@ var Review = (function () {
   function renderList(host, all, resumeHtml) {
     var isRead = mode === 'read';
     var filtered = all.filter(function (m) {
-      if (isRead) return m.type === 'read' || (!m.type && m.src !== 'dictation' && m.src !== 'manual');
-      return m.type === 'write' || m.src === 'dictation' || m.src === 'manual';
+      var t = m.type || (m.src === 'dictation' ? 'write' : 'read');
+      return isRead ? (t === 'read') : (t === 'write');
     });
     if (!filtered.length) {
       host.innerHTML = '<div class="empty"><span class="big">暂无' + (isRead ? '识字' : '听写') + '错误</span>' +
@@ -106,6 +116,7 @@ var Review = (function () {
       '<div style="margin-bottom:14px">' +
         '<button class="btn-main" onclick="Review.reviewAll()">复习全部' + typeName + '</button> ' +
         '<button class="btn-main ghost" onclick="Review.showAdd()">手动添加</button> ' +
+        '<button class="btn-ghost" onclick="Review.toggleSelect()">' + (selOn ? '退出多选' : '多选复习') + '</button> ' +
         '<button class="btn-ghost" onclick="Review.showSettings()">听写设置</button>' +
       '</div>' +
 
@@ -120,8 +131,17 @@ var Review = (function () {
           '</div>' +
           '<div class="mistake-grid">' + items.map(cardHtml).join('') + '</div>' +
         '</div>';
-      }).join('');
+      }).join('') +
+
+      (selOn ?
+        '<div class="selbar" id="rvSelbar">' +
+          '<span class="sel-count" id="rvSelCount">已选 0 字</span>' +
+          '<button class="btn-ghost" onclick="Review.selectAll()">全选</button>' +
+          '<button class="btn-ghost" onclick="Review.clearSel()">清空</button>' +
+          '<button class="btn-main" onclick="Review.addSelectedToReview()">添加到复习 ▶</button>' +
+        '</div>' : '');
     bindCards(host);
+    if (selOn) updateSelBar();
   }
 
   function box(label, n, color) {
@@ -133,19 +153,23 @@ var Review = (function () {
     return (ws && ws.length) ? ws.slice(0, 3) : [];
   }
   function cardHtml(m) {
-    var isRead = m.type === 'read' || (!m.type && m.src !== 'dictation' && m.src !== 'manual');
+    var isRead = m.type !== 'write';
     var pct = Math.min(100, Math.round(m.right / 3 * 100));
     var typeLbl = isRead ? '识字' : '听写';
     var typeColor = isRead ? '#55d6ff' : '#ffa34e';
+    var mastered = m.right >= 3;
     var cws = cardWords(m);
     var wordsHtml = cws.length ? '<div class="cw">词 ' + cws.map(function (w0) { return '<span>' + w0 + '</span>'; }).join('') + '</div>' : '';
-    return '<div class="mcard" data-k="' + m.c + '">' +
-      '<button class="del" onclick="Review.del(event,\'' + m.c + '\')">✕</button>' +
-      '<button class="type-btn" onclick="Review.toggleType(event,\'' + m.c + '\')" style="color:' + typeColor + '">' + typeLbl + '</button>' +
+    var selHtml = selOn ? '<label class="sel" onclick="event.stopPropagation()"><input type="checkbox" class="msel" data-k="' + mkey(m) + '"></label>' : '';
+    return '<div class="mcard' + (selOn ? ' selmode' : '') + '" data-k="' + mkey(m) + '">' +
+      selHtml +
+      '<span class="type-btn" style="color:' + typeColor + '">' + typeLbl + '</span>' +
+      (mastered ? '<span class="m-mastered">已掌握</span>' : '') +
       '<div class="g' + (m.c.length > 1 ? ' small' : '') + '">' + m.c + '</div>' +
       '<div class="p">' + fillPinyin(m.c, m.p) + '</div>' +
       wordsHtml +
       '<div class="n">错 ' + m.wrong + ' 次 · 已练对 ' + m.right + '/3</div>' +
+      '<div class="mdate">' + (m.date || m.first || '') + '</div>' +
       '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
     '</div>';
   }
@@ -153,50 +177,80 @@ var Review = (function () {
   function bindCards(host) {
     host.querySelectorAll('.mcard').forEach(function (el) {
       el.addEventListener('click', function (e) {
-        if (e.target.closest('.del') || e.target.closest('.type-btn')) return;
+        if (e.target.closest('.sel') || e.target.closest('.type-btn')) return;
         var k = el.dataset.k, m = Store.get().mistakes[k];
         if (m) Sfx.teacherRead([m.c], '', function () {
           if (m.s) Sfx.sentenceRead(m.c, null, function () { Sfx.say(m.c + '。' + (m.s || ''), { rate: .92 }); });
         });
       });
     });
+    host.querySelectorAll('.msel').forEach(function (cb) {
+      cb.addEventListener('change', updateSelBar);
+    });
   }
 
-  function del(e, k) { e.stopPropagation(); Store.removeMistake(k); Sfx.tick(); render(); App.syncHud(); }
-  function toggleType(e, k) {
-    e.stopPropagation();
-    var m = Store.get().mistakes[k]; if (!m) return;
-    m.type = m.type === 'read' ? 'write' : 'read';
-    if (m.type === 'write') { m.dictPhase = m.dictPhase || 0; m.dictPassCorrect = m.dictPassCorrect || 0; }
-    Store.save(); Sfx.tick(); render();
+  function updateSelBar() {
+    var host = document.getElementById('reviewBody');
+    if (!host) return;
+    var n = host.querySelectorAll('.msel:checked').length;
+    var el = document.getElementById('rvSelCount');
+    if (el) el.textContent = '已选 ' + n + ' 字';
+  }
+
+  function toggleSelect(force) {
+    selOn = (force === undefined) ? !selOn : !!force;
+    Sfx.tick();
+    render();
+  }
+  function selectAll() {
+    var host = document.getElementById('reviewBody');
+    host.querySelectorAll('.msel').forEach(function (cb) { cb.checked = true; });
+    updateSelBar();
+  }
+  function clearSel() {
+    var host = document.getElementById('reviewBody');
+    host.querySelectorAll('.msel').forEach(function (cb) { cb.checked = false; });
+    updateSelBar();
+  }
+  function addSelectedToReview() {
+    var host = document.getElementById('reviewBody');
+    if (!host) return;
+    var ks = [];
+    host.querySelectorAll('.msel:checked').forEach(function (cb) { ks.push(cb.dataset.k); });
+    if (!ks.length) { App.toast('先勾选要复习的错字'); return; }
+    var g = Store.get(), pool = [];
+    ks.forEach(function (k) { if (g.mistakes[k]) pool.push(g.mistakes[k]); });
+    if (!pool.length) { App.toast('没有可复习的错字'); return; }
+    selOn = false;
+    startReviewQuiz(pool);
   }
 
   /* ================= 按日期复习 ================= */
   function reviewDate(date) {
+    var isRead = mode === 'read';
     var all = Store.mistakeList().filter(function (m) {
-      var isRead = mode === 'read';
-      var typeMatch = isRead ? (m.type === 'read' || (!m.type && m.src !== 'dictation' && m.src !== 'manual'))
-        : (m.type === 'write' || m.src === 'dictation' || m.src === 'manual');
-      return typeMatch && m.right < 3 && (m.date === date || m.first === date);
+      var t = m.type || (m.src === 'dictation' ? 'write' : 'read');
+      return (isRead ? t === 'read' : t === 'write') && m.right < 3 && (m.date === date || m.first === date);
     });
     if (!all.length) { App.toast('该日期没有待复习的错字'); return; }
     startReviewQuiz(all);
   }
 
   function reviewAll() {
+    var isRead = mode === 'read';
     var all = Store.mistakeList().filter(function (m) {
-      var isRead = mode === 'read';
-      return isRead ? (m.type === 'read' || (!m.type && m.src !== 'dictation' && m.src !== 'manual'))
-        : (m.type === 'write' || m.src === 'dictation' || m.src === 'manual');
-    }).filter(function (m) { return m.right < 3; });
+      var t = m.type || (m.src === 'dictation' ? 'write' : 'read');
+      return (isRead ? t === 'read' : t === 'write') && m.right < 3;
+    });
     if (!all.length) { App.toast('没有待复习的错字'); return; }
     startReviewQuiz(all);
   }
 
-  /* ================= 复习测验（卡牌选读音） ================= */
+  /* ================= 复习测验（卡牌选读音，与字词卡牌一致） ================= */
   function startReviewQuiz(pool) {
-    quiz = { pool: shuffle(pool), i: 0, score: 0, combo: 0, right: 0, wrong: 0, maxCombo: 0, kind: 'review' };
+    quiz = { pool: shuffle(pool), i: 0, score: 0, combo: 0, right: 0, wrong: 0, maxCombo: 0, kind: 'review', retried: {} };
     Session.save('review', { mode: mode, quiz: quiz });
+    if (window.Timer) Timer.start('review');
     reviewStep();
   }
 
@@ -206,13 +260,19 @@ var Review = (function () {
     var m = quiz.pool[quiz.i], right = fillPinyin(m.c, m.p);
     var conf = Pinyin.confuse(right);
     var opts = Math.random() < 0.5 ? [right, conf.text] : [conf.text, right];
+    var acc = (quiz.right + quiz.wrong) ? Math.round(quiz.right / (quiz.right + quiz.wrong) * 100) : 100;
 
     host.innerHTML =
       '<div class="battle-hud">' +
         '<div class="hud-box"><i>SCORE</i><b id="rvScore" style="color:var(--gold-2)">' + quiz.score + '</b></div>' +
         '<div class="hud-box"><i>COMBO</i><b id="rvCombo" style="color:var(--zaun-2)">' + quiz.combo + '</b></div>' +
-        '<div class="hud-box"><i>第 ' + (quiz.i + 1) + ' / ' + quiz.pool.length + ' 题</i><b>' +
-          (quiz.right + quiz.wrong ? Math.round(quiz.right / (quiz.right + quiz.wrong) * 100) : 100) + '%</b></div>' +
+        '<div class="hud-box"><i>正确率</i><b>' + acc + '%</b></div>' +
+        '<div class="hud-box hud-timer"><i>计时</i><b id="timerDisp-review">00:00</b>' +
+          '<button class="hud-tbtn" id="timerStart-review" onclick="Timer.start(\'review\')">开始</button>' +
+          '<button class="hud-tbtn" id="timerPause-review" style="display:none" onclick="Timer.pause(\'review\')">暂停</button>' +
+          '<button class="hud-tbtn" onclick="Timer.reset(\'review\')">重置</button>' +
+        '</div>' +
+        '<div class="hud-box"><i>第 ' + (quiz.i + 1) + ' / ' + quiz.pool.length + ' 题</i><b>' + (quiz.right + quiz.wrong ? Math.round(quiz.right / (quiz.right + quiz.wrong) * 100) : 100) + '%</b></div>' +
       '</div>' +
       '<div class="quiz-row">' +
         '<div class="card-slot">' +
@@ -229,6 +289,7 @@ var Review = (function () {
         return '<div class="choice" data-p="' + p + '">' + p + '</div>';
       }).join('') + '</div>';
 
+    if (window.Timer) { Timer.update('review'); Timer.sync('review'); }
     if (quiz.combo >= 3) FX.comboFire(quiz.combo);
     quiz.locked = false;
     host.querySelector('.choices').addEventListener('click', function (e) {
@@ -242,7 +303,7 @@ var Review = (function () {
         quiz.combo++; quiz.right++; quiz.maxCombo = Math.max(quiz.maxCombo, quiz.combo);
         var lv = quiz.combo >= 12 ? 4 : quiz.combo >= 7 ? 3 : quiz.combo >= 3 ? 2 : 1;
         var gain = 10 * lv + quiz.combo * 2; quiz.score += gain;
-        Store.hitMistake(m.c);
+        Store.hitMistake(m.c, m.type);   /* 按类型独立记账 */
         var sv = document.getElementById('rvScore'), cv = document.getElementById('rvCombo');
         reviewReward(quiz.combo, document.getElementById('rvCard'), gain, sv, cv);
         FX.countTo(sv, quiz.score - gain, quiz.score, 380);
@@ -255,8 +316,13 @@ var Review = (function () {
         FX.comboFireReset();
         document.getElementById('rvCard').classList.add('miss');
         FX.shake('bad'); FX.strobe(true); Sfx.miss();
+        /* 错题重新入队：让孩子稍后再选一次（最多重练 MAX_RETRY 次） */
+        var kk = mkey(m);
+        quiz.retried[kk] = (quiz.retried[kk] || 0) + 1;
+        if (quiz.retried[kk] <= MAX_RETRY) quiz.pool.push(m);
         var words = (m.w && m.w.length ? m.w : (window.Words && window.Words.lookupWords ? window.Words.lookupWords(m.c) : [])).slice(0, 3);
         if (!words.length) words = [m.c];
+        /* 纠错面板与字词卡牌一致：语音播完才亮"继续" */
         document.getElementById('afterSlot').innerHTML =
           '<div class="correction"><div class="ct">读音记牢</div>' +
             '<div class="cr-row">' +
@@ -265,9 +331,18 @@ var Review = (function () {
             '</div>' +
             '<div class="acts">' +
               '<button class="btn-main ghost" onclick="Review.speakFix(\'' + m.c + '\')">听一遍</button>' +
-              '<button class="btn-main" onclick="Review.reviewNext()">记住了，继续</button>' +
+              '<button class="btn-main disabled" id="rvNext" onclick="">听完后继续</button>' +
             '</div></div>';
-        setTimeout(function () { Sfx.teacherRead([m.c].concat(words), '', null); }, 400);
+        setTimeout(function () {
+          var lit = false;
+          function light() {
+            if (lit) return; lit = true;
+            var b = document.getElementById('rvNext');
+            if (b) { b.classList.remove('disabled'); b.setAttribute('onclick', 'Review.reviewNext()'); b.textContent = '记住了，继续'; }
+          }
+          var guard = setTimeout(light, 8000);   /* 语音异常兜底，绝不卡死 */
+          Sfx.teacherRead([m.c].concat(words), '', function () { clearTimeout(guard); light(); });
+        }, 400);
       }
     });
     /* 稳定出题点：进度落盘（临时退出后能接着玩） */
@@ -281,6 +356,7 @@ var Review = (function () {
     quiz = rs.quiz; quiz.locked = false;
     if (rs.mode) { mode = rs.mode; syncModeSeg(); }
     var rc = document.getElementById('rvResume'); if (rc) rc.style.display = 'none';
+    if (window.Timer) Timer.start('review');
     reviewStep();
     App.toast('已恢复刚才的复习进度');
   }
@@ -317,6 +393,7 @@ var Review = (function () {
   function reviewSummary(host) {
     FX.comboFireReset();
     Session.clear('review');
+    if (window.Timer) Timer.reset('review');
     var total = quiz.right + quiz.wrong;
     var acc = total ? Math.round(quiz.right / total * 100) : 0;
     var rank = acc === 100 ? 'S' : acc >= 90 ? 'A' : acc >= 75 ? 'B' : acc >= 60 ? 'C' : 'D';
@@ -396,23 +473,16 @@ var Review = (function () {
     Sfx.tick(); App.toast('已保存'); render();
   }
 
-  function clearMastered() {
-    var list = Store.mistakeList().filter(function (m) { return m.right >= 3; });
-    if (!list.length) { App.toast('还没有已掌握的字'); return; }
-    list.forEach(function (m) { Store.removeMistake(m.c); });
-    Store.log('review', '清空已掌握', '清除 ' + list.length + ' 个字');
-    App.toast('清除了 ' + list.length + ' 个字');
-    Sfx.tick(); render(); App.syncHud();
-  }
-
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 
   return {
-    render: render, del: del, clearMastered: clearMastered,
-    showAdd: showAdd, doAdd: doAdd, toggleType: toggleType,
+    render: render,
+    showAdd: showAdd, doAdd: doAdd,
     showSettings: showSettings, saveSettings: saveSettings,
     reviewDate: reviewDate, reviewAll: reviewAll,
     speakFix: speakFix, reviewNext: reviewNext,
-    resume: resume, forgetSession: forgetSession, flush: flush
+    resume: resume, forgetSession: forgetSession, flush: flush,
+    toggleSelect: toggleSelect, selectAll: selectAll, clearSel: clearSel, addSelectedToReview: addSelectedToReview,
+    updateSelBar: updateSelBar
   };
 })();

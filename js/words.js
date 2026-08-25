@@ -782,7 +782,7 @@ var Words = (function () {
         reward(state.combo, document.getElementById('theCard'), gain, sv, cv, item);
         FX.countTo(sv, prev, state.score, 380);
         Store.bump('words');
-        Store.hitMistake(item.c);
+        Store.hitMistake(item.c, 'read');
         if (Store.addXp(4 + lv)) {
           Sfx.fanfare(); FX.banner('LEVEL UP  ' + Store.get().lv, '#ffe0a3', 60);
           App.toast('等级提升！现在是 ' + Store.get().lv + ' 级');
@@ -802,7 +802,7 @@ var Words = (function () {
       FX.comboFireReset();                    // 火焰熄灭
       Sfx.miss();                               // 答错只保留"啊哦"音效
       document.getElementById('comboVal').textContent = 0;
-      var isNew = !Store.get().mistakes[item.c];
+      var isNew = !Store.get().mistakes[item.c + '|read'];
       Store.addMistake(item, g.grade, item.kind === 'poly' ? 'poly' : (item.c.length > 1 ? 'ci' : 'zi'), 'card');
       Store.addWrongChar(item.c); renderStats();   /* 实时更新按天错字统计 */
       if (isNew) Store.log('words', '新增错题', item.c + '（' + rightP + '）· ' + WORD_BANK[g.grade].name + ' · ' + (item.lesson || ''), { c: item.c, p: rightP });
@@ -1209,7 +1209,7 @@ var Words = (function () {
         reward(dict.combo, row, gain, sv, cv, it.c);
         FX.countTo(sv, prev, dict.score, 380);
         Store.bump('words');
-        Store.hitMistake(it.c);
+        Store.hitMistake(it.c, 'write');
         if (Store.addXp(5 + lv)) {
           Sfx.fanfare(); FX.banner('LEVEL UP  ' + Store.get().lv, '#ffe0a3', 60);
           App.toast('等级提升！现在是 ' + Store.get().lv + ' 级');
@@ -1224,7 +1224,7 @@ var Words = (function () {
       setTimeout(function () { row.classList.remove('shake-no'); }, 420);
       FX.shake('bad');
       Sfx.miss();
-      var isNew = !Store.get().mistakes[it.c];
+      var isNew = !Store.get().mistakes[it.c + '|write'];
       Store.addMistake(it, g.grade, 'zi', 'dictation');
       Store.addWrongChar(it.c); renderStats();     /* 实时更新按天错字统计 */
       Store.log('words', '听写错字', it.c + '（' + it.p + '）· ' + WORD_BANK[g.grade].name +

@@ -9,6 +9,25 @@ var Store = (function () {
     return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
   }
 
+  /* 错字存储键：单字 + 类型，识字(read)/听写(write) 各自独立一把钥匙。
+     旧版本以"字"为键（未区分两类），升级时由 migrateMistakes 按 src 归并。 */
+  function keyOf(c, type) { return c + '|' + (type === 'write' ? 'write' : 'read'); }
+
+  /* 旧版数据错字以裸字为键，未区分识字/听写 → 按 src 迁移到 c|read / c|write 两把独立钥匙，
+     使删除/复习识字错字绝不会影响听写错字。obj 为待迁移的存档对象。 */
+  function migrateMistakes(obj) {
+    if (!obj || !obj.mistakes) return;
+    var ms = obj.mistakes;
+    for (var k in ms) {
+      if (k.indexOf('|') >= 0) continue;             /* 已是新键，跳过 */
+      var m = ms[k]; if (!m) continue;
+      var canon = (m.src === 'dictation') ? 'write' : 'read';
+      var nk = keyOf(k, canon);
+      if (nk !== k) { ms[nk] = m; delete ms[k]; }
+      m.type = canon;
+    }
+  }
+
   function defaults() {
   
   /* ============ 数学错题 ============ */
@@ -19,7 +38,7 @@ var Store = (function () {
   /* ============ 云存档同步 ============ */
   function getSyncCode(){var g=get();if(!g.syncCode){g.syncCode=String(Math.floor(100000+Math.random()*900000));save()}return g.syncCode}
   function exportForSync(){return JSON.stringify(get())}
-  function importFromSync(j){var inc;try{inc=JSON.parse(j)}catch(e){return false}var g=get();g.lv=Math.max(g.lv,inc.lv||1);g.xp=Math.max(g.xp,inc.xp||0);g.totalWords=Math.max(g.totalWords,inc.totalWords||0);g.totalMath=Math.max(g.totalMath,inc.totalMath||0);if(inc.best){g.best.combo=Math.max(g.best.combo,inc.best.combo||0);g.best.score=Math.max(g.best.score,inc.best.score||0)}for(var k in inc.mistakes||{}){if(!g.mistakes[k])g.mistakes[k]=inc.mistakes[k];else{g.mistakes[k].wrong=Math.max(g.mistakes[k].wrong,inc.mistakes[k].wrong||0);g.mistakes[k].right=Math.max(g.mistakes[k].right,inc.mistakes[k].right||0)}}for(var k2 in inc.mathMistakes||{}){if(!g.mathMistakes[k2])g.mathMistakes[k2]=inc.mathMistakes[k2];else{g.mathMistakes[k2].wrong=Math.max(g.mathMistakes[k2].wrong,inc.mathMistakes[k2].wrong||0);g.mathMistakes[k2].right=Math.max(g.mathMistakes[k2].right,inc.mathMistakes[k2].right||0)}}if(inc.mathAttempts&&inc.mathAttempts.length){if(!g.mathAttempts)g.mathAttempts=[];var have={};g.mathAttempts.forEach(function(x){have[x.ts]=1});inc.mathAttempts.forEach(function(x){if(x&&x.ts!=null&&!have[x.ts]){have[x.ts]=1;g.mathAttempts.push(x)}});g.mathAttempts.sort(function(a,b){return a.ts-b.ts});if(g.mathAttempts.length>500)g.mathAttempts=g.mathAttempts.slice(-500)}for(var d in inc.days||{}){if(!g.days[d])g.days[d]=inc.days[d];else{g.days[d].words=Math.max(g.days[d].words||0,inc.days[d].words||0);g.days[d].mathQ=Math.max(g.days[d].mathQ||0,inc.days[d].mathQ||0)}}save();return true}
+  function importFromSync(j){var inc;try{inc=JSON.parse(j)}catch(e){return false}var g=get();g.lv=Math.max(g.lv,inc.lv||1);g.xp=Math.max(g.xp,inc.xp||0);g.totalWords=Math.max(g.totalWords,inc.totalWords||0);g.totalMath=Math.max(g.totalMath,inc.totalMath||0);if(inc.best){g.best.combo=Math.max(g.best.combo,inc.best.combo||0);g.best.score=Math.max(g.best.score,inc.best.score||0)}for(var k in inc.mistakes||{}){if(!g.mistakes[k])g.mistakes[k]=inc.mistakes[k];else{g.mistakes[k].wrong=Math.max(g.mistakes[k].wrong,inc.mistakes[k].wrong||0);g.mistakes[k].right=Math.max(g.mistakes[k].right,inc.mistakes[k].right||0)}}for(var k2 in inc.mathMistakes||{}){if(!g.mathMistakes[k2])g.mathMistakes[k2]=inc.mathMistakes[k2];else{g.mathMistakes[k2].wrong=Math.max(g.mathMistakes[k2].wrong,inc.mathMistakes[k2].wrong||0);g.mathMistakes[k2].right=Math.max(g.mathMistakes[k2].right,inc.mathMistakes[k2].right||0)}}if(inc.mathAttempts&&inc.mathAttempts.length){if(!g.mathAttempts)g.mathAttempts=[];var have={};g.mathAttempts.forEach(function(x){have[x.ts]=1});inc.mathAttempts.forEach(function(x){if(x&&x.ts!=null&&!have[x.ts]){have[x.ts]=1;g.mathAttempts.push(x)}});g.mathAttempts.sort(function(a,b){return a.ts-b.ts});if(g.mathAttempts.length>500)g.mathAttempts=g.mathAttempts.slice(-500)}for(var d in inc.days||{}){if(!g.days[d])g.days[d]=inc.days[d];else{g.days[d].words=Math.max(g.days[d].words||0,inc.days[d].words||0);g.days[d].mathQ=Math.max(g.days[d].mathQ||0,inc.days[d].mathQ||0)}}migrateMistakes(g);save();return true}
 
 
   return {
@@ -49,6 +68,7 @@ var Store = (function () {
     } catch (e) { data = defaults(); }
     var d = defaults();
     for (var k in d) if (!(k in data)) data[k] = d[k];
+    migrateMistakes(data);                 /* 旧版裸键错字 → 识字/听写独立键 */
     checkStreak();
     return data;
   }
@@ -138,48 +158,62 @@ var Store = (function () {
     markActive(); save();
   }
 
-  /* 错题 */
-  function addMistake(item, grade, type, src) {
-    var g = get(), k = item.c;
+  /* 错题：识字错误与听写错误按独立钥匙存储，互不影响 */
+  function addMistake(item, grade, kind, src) {
+    src = src || 'card';
+    var canon = src === 'dictation' ? 'write'
+      : src === 'manual' ? (kind === 'write' ? 'write' : 'read')
+      : 'read';                              /* 字词卡牌=识字(read)，听写=write，手动按所选 */
+    var k = keyOf(item.c, canon);
+    var g = get();
     if (!g.mistakes[k]) {
-      g.mistakes[k] = { c: item.c, p: item.p, w: item.w || [], s: item.s || '', grade: grade, type: type,
-                        wrong: 0, right: 0, ts: Date.now(), date: today(), first: today(), src: src || 'card' };
+      g.mistakes[k] = { c: item.c, p: item.p, w: item.w || [], s: item.s || '', grade: grade,
+        type: canon, kind: (src === 'card') ? (kind || (item.c.length > 1 ? 'ci' : 'zi')) : (item.c.length > 1 ? 'ci' : 'zi'),
+        wrong: 0, right: 0, ts: Date.now(), date: today(), first: today(), src: src };
     }
     var m = g.mistakes[k];
     m.wrong++;
     m.ts = Date.now();
     m.date = today();                       /* 最近一次写错的日期 */
     if (!m.first) m.first = today();
-    if (src) m.src = src;                   /* card=卡牌 / dictation=听写 */
+    if (src) m.src = src;                   /* card=卡牌 / dictation=听写 / manual=手动 */
     if (item.w && item.w.length && !(m.w || []).length) m.w = item.w;
     if (item.s && !m.s) m.s = item.s;
     if (item.lesson && !m.lesson) m.lesson = item.lesson;
     save();
   }
-  function hitMistake(k) {
+  function hitMistake(c, type) {
     var g = get();
+    var k = keyOf(c, type);
+    if (!g.mistakes[k] && g.mistakes[c]) k = c;   /* 兼容旧版裸键 */
     if (g.mistakes[k]) { g.mistakes[k].right++; save(); }
   }
-  function removeMistake(k) { var g = get(); delete g.mistakes[k]; save(); }
+  function removeMistake(c, type) {
+    var g = get();
+    var k = (c.indexOf('|') >= 0) ? c : keyOf(c, type);
+    if (g.mistakes[k]) { delete g.mistakes[k]; save(); }
+  }
   function mistakeList() {
     var g = get(), out = [];
     for (var k in g.mistakes) out.push(g.mistakes[k]);
     out.sort(function (a, b) { return (b.wrong - b.right) - (a.wrong - a.right) || b.ts - a.ts; });
     return out;
   }
-  /* 手动添加错字 */
+  /* 手动添加错字（按所选类型独立成键） */
   function manualAdd(item) {
-    var g = get(), k = item.c;
+    var g = get();
+    var canon = item.type === 'write' ? 'write' : 'read';
+    var k = keyOf(item.c, canon);
     if (!g.mistakes[k]) {
       g.mistakes[k] = { c: item.c, p: item.p || '', w: item.w || [], s: item.s || '',
-                        grade: item.grade || g.grade, type: item.type || 'write',
+                        grade: item.grade || g.grade, type: canon, kind: item.c.length > 1 ? 'ci' : 'zi',
                         wrong: 1, right: 0, ts: Date.now(), date: today(), first: today(),
                         src: 'manual', remarks: item.remarks || '',
                         dictPhase: 0, dictPassCorrect: 0, dictPassTotal: 0, lastDictDate: '' };
     } else {
       g.mistakes[k].wrong++;
       g.mistakes[k].ts = Date.now(); g.mistakes[k].date = today();
-      if (item.type && !g.mistakes[k].migrated) g.mistakes[k].type = item.type;
+      g.mistakes[k].type = canon;
     }
     save();
   }
@@ -221,11 +255,12 @@ var Store = (function () {
     save();
   }
 
-  /* 按类型筛选错字 */
+  /* 按类型筛选错字（type 恒为 read/write，兼容旧版缺 type 的兜底） */
   function mistakeByType(srcType) {
     return mistakeList().filter(function (m) {
-      if (srcType === 'read') return m.type === 'read' || (!m.type && m.src !== 'dictation');
-      if (srcType === 'write') return m.type === 'write' || m.src === 'dictation' || m.src === 'manual' || (m.src === 'manual');
+      var t = m.type || (m.src === 'dictation' ? 'write' : 'read');
+      if (srcType === 'read') return t === 'read';
+      if (srcType === 'write') return t === 'write';
       return true;
     });
   }
@@ -355,6 +390,7 @@ var Store = (function () {
     }
     /* 徽章并集 */
     if (incoming.badges) for (var b in incoming.badges) if (!g.badges[b]) g.badges[b] = incoming.badges[b];
+    migrateMistakes(g);                    /* 导入数据同样归并到独立钥匙 */
     save();
   
   /* ============ 数学错题 ============ */
@@ -365,7 +401,7 @@ var Store = (function () {
   /* ============ 云存档同步 ============ */
   function getSyncCode(){var g=get();if(!g.syncCode){g.syncCode=String(Math.floor(100000+Math.random()*900000));save()}return g.syncCode}
   function exportForSync(){return JSON.stringify(get())}
-  function importFromSync(j){var inc;try{inc=JSON.parse(j)}catch(e){return false}var g=get();g.lv=Math.max(g.lv,inc.lv||1);g.xp=Math.max(g.xp,inc.xp||0);g.totalWords=Math.max(g.totalWords,inc.totalWords||0);g.totalMath=Math.max(g.totalMath,inc.totalMath||0);if(inc.best){g.best.combo=Math.max(g.best.combo,inc.best.combo||0);g.best.score=Math.max(g.best.score,inc.best.score||0)}for(var k in inc.mistakes||{}){if(!g.mistakes[k])g.mistakes[k]=inc.mistakes[k];else{g.mistakes[k].wrong=Math.max(g.mistakes[k].wrong,inc.mistakes[k].wrong||0);g.mistakes[k].right=Math.max(g.mistakes[k].right,inc.mistakes[k].right||0)}}for(var k2 in inc.mathMistakes||{}){if(!g.mathMistakes[k2])g.mathMistakes[k2]=inc.mathMistakes[k2];else{g.mathMistakes[k2].wrong=Math.max(g.mathMistakes[k2].wrong,inc.mathMistakes[k2].wrong||0);g.mathMistakes[k2].right=Math.max(g.mathMistakes[k2].right,inc.mathMistakes[k2].right||0)}}if(inc.mathAttempts&&inc.mathAttempts.length){if(!g.mathAttempts)g.mathAttempts=[];var have={};g.mathAttempts.forEach(function(x){have[x.ts]=1});inc.mathAttempts.forEach(function(x){if(x&&x.ts!=null&&!have[x.ts]){have[x.ts]=1;g.mathAttempts.push(x)}});g.mathAttempts.sort(function(a,b){return a.ts-b.ts});if(g.mathAttempts.length>500)g.mathAttempts=g.mathAttempts.slice(-500)}for(var d in inc.days||{}){if(!g.days[d])g.days[d]=inc.days[d];else{g.days[d].words=Math.max(g.days[d].words||0,inc.days[d].words||0);g.days[d].mathQ=Math.max(g.days[d].mathQ||0,inc.days[d].mathQ||0)}}save();return true}
+  function importFromSync(j){var inc;try{inc=JSON.parse(j)}catch(e){return false}var g=get();g.lv=Math.max(g.lv,inc.lv||1);g.xp=Math.max(g.xp,inc.xp||0);g.totalWords=Math.max(g.totalWords,inc.totalWords||0);g.totalMath=Math.max(g.totalMath,inc.totalMath||0);if(inc.best){g.best.combo=Math.max(g.best.combo,inc.best.combo||0);g.best.score=Math.max(g.best.score,inc.best.score||0)}for(var k in inc.mistakes||{}){if(!g.mistakes[k])g.mistakes[k]=inc.mistakes[k];else{g.mistakes[k].wrong=Math.max(g.mistakes[k].wrong,inc.mistakes[k].wrong||0);g.mistakes[k].right=Math.max(g.mistakes[k].right,inc.mistakes[k].right||0)}}for(var k2 in inc.mathMistakes||{}){if(!g.mathMistakes[k2])g.mathMistakes[k2]=inc.mathMistakes[k2];else{g.mathMistakes[k2].wrong=Math.max(g.mathMistakes[k2].wrong,inc.mathMistakes[k2].wrong||0);g.mathMistakes[k2].right=Math.max(g.mathMistakes[k2].right,inc.mathMistakes[k2].right||0)}}if(inc.mathAttempts&&inc.mathAttempts.length){if(!g.mathAttempts)g.mathAttempts=[];var have={};g.mathAttempts.forEach(function(x){have[x.ts]=1});inc.mathAttempts.forEach(function(x){if(x&&x.ts!=null&&!have[x.ts]){have[x.ts]=1;g.mathAttempts.push(x)}});g.mathAttempts.sort(function(a,b){return a.ts-b.ts});if(g.mathAttempts.length>500)g.mathAttempts=g.mathAttempts.slice(-500)}for(var d in inc.days||{}){if(!g.days[d])g.days[d]=inc.days[d];else{g.days[d].words=Math.max(g.days[d].words||0,inc.days[d].words||0);g.days[d].mathQ=Math.max(g.days[d].mathQ||0,inc.days[d].mathQ||0)}}migrateMistakes(g);save();return true}
 
 
   return { ok: true, msg: '已合并 ' + merged.length + ' 条历史记录' };
@@ -407,7 +443,7 @@ var Store = (function () {
   /* ============ 云存档同步 ============ */
   function getSyncCode(){var g=get();if(!g.syncCode){g.syncCode=String(Math.floor(100000+Math.random()*900000));save()}return g.syncCode}
   function exportForSync(){return JSON.stringify(get())}
-  function importFromSync(j){var inc;try{inc=JSON.parse(j)}catch(e){return false}var g=get();g.lv=Math.max(g.lv,inc.lv||1);g.xp=Math.max(g.xp,inc.xp||0);g.totalWords=Math.max(g.totalWords,inc.totalWords||0);g.totalMath=Math.max(g.totalMath,inc.totalMath||0);if(inc.best){g.best.combo=Math.max(g.best.combo,inc.best.combo||0);g.best.score=Math.max(g.best.score,inc.best.score||0)}for(var k in inc.mistakes||{}){if(!g.mistakes[k])g.mistakes[k]=inc.mistakes[k];else{g.mistakes[k].wrong=Math.max(g.mistakes[k].wrong,inc.mistakes[k].wrong||0);g.mistakes[k].right=Math.max(g.mistakes[k].right,inc.mistakes[k].right||0)}}for(var k2 in inc.mathMistakes||{}){if(!g.mathMistakes[k2])g.mathMistakes[k2]=inc.mathMistakes[k2];else{g.mathMistakes[k2].wrong=Math.max(g.mathMistakes[k2].wrong,inc.mathMistakes[k2].wrong||0);g.mathMistakes[k2].right=Math.max(g.mathMistakes[k2].right,inc.mathMistakes[k2].right||0)}}if(inc.mathAttempts&&inc.mathAttempts.length){if(!g.mathAttempts)g.mathAttempts=[];var have={};g.mathAttempts.forEach(function(x){have[x.ts]=1});inc.mathAttempts.forEach(function(x){if(x&&x.ts!=null&&!have[x.ts]){have[x.ts]=1;g.mathAttempts.push(x)}});g.mathAttempts.sort(function(a,b){return a.ts-b.ts});if(g.mathAttempts.length>500)g.mathAttempts=g.mathAttempts.slice(-500)}for(var d in inc.days||{}){if(!g.days[d])g.days[d]=inc.days[d];else{g.days[d].words=Math.max(g.days[d].words||0,inc.days[d].words||0);g.days[d].mathQ=Math.max(g.days[d].mathQ||0,inc.days[d].mathQ||0)}}save();return true}
+  function importFromSync(j){var inc;try{inc=JSON.parse(j)}catch(e){return false}var g=get();g.lv=Math.max(g.lv,inc.lv||1);g.xp=Math.max(g.xp,inc.xp||0);g.totalWords=Math.max(g.totalWords,inc.totalWords||0);g.totalMath=Math.max(g.totalMath,inc.totalMath||0);if(inc.best){g.best.combo=Math.max(g.best.combo,inc.best.combo||0);g.best.score=Math.max(g.best.score,inc.best.score||0)}for(var k in inc.mistakes||{}){if(!g.mistakes[k])g.mistakes[k]=inc.mistakes[k];else{g.mistakes[k].wrong=Math.max(g.mistakes[k].wrong,inc.mistakes[k].wrong||0);g.mistakes[k].right=Math.max(g.mistakes[k].right,inc.mistakes[k].right||0)}}for(var k2 in inc.mathMistakes||{}){if(!g.mathMistakes[k2])g.mathMistakes[k2]=inc.mathMistakes[k2];else{g.mathMistakes[k2].wrong=Math.max(g.mathMistakes[k2].wrong,inc.mathMistakes[k2].wrong||0);g.mathMistakes[k2].right=Math.max(g.mathMistakes[k2].right,inc.mathMistakes[k2].right||0)}}if(inc.mathAttempts&&inc.mathAttempts.length){if(!g.mathAttempts)g.mathAttempts=[];var have={};g.mathAttempts.forEach(function(x){have[x.ts]=1});inc.mathAttempts.forEach(function(x){if(x&&x.ts!=null&&!have[x.ts]){have[x.ts]=1;g.mathAttempts.push(x)}});g.mathAttempts.sort(function(a,b){return a.ts-b.ts});if(g.mathAttempts.length>500)g.mathAttempts=g.mathAttempts.slice(-500)}for(var d in inc.days||{}){if(!g.days[d])g.days[d]=inc.days[d];else{g.days[d].words=Math.max(g.days[d].words||0,inc.days[d].words||0);g.days[d].mathQ=Math.max(g.days[d].mathQ||0,inc.days[d].mathQ||0)}}migrateMistakes(g);save();return true}
 
 
   return {
