@@ -370,6 +370,19 @@
 .date-label { font-size: 14px; letter-spacing: 2px; color: var(--gold-2); font-family: var(--serif); }
 .date-count { font-size: 11px; letter-spacing: 1px; color: rgba(232,217,187,.5); }
 .btn-main.small { padding: 5px 12px; font-size: 11px; letter-spacing: 1px; }
+.btn-ghost.small { padding: 5px 12px; font-size: 11px; letter-spacing: 1px; }
+
+/* 错字卡「收起」按钮 + 复习垃圾箱 */
+.m-trash {
+  display: inline-block; margin-top: 9px; font-size: 11px; letter-spacing: 1px; cursor: pointer;
+  color: rgba(232,217,187,.55); background: rgba(0,0,0,.25);
+  border: 1px solid rgba(232,217,187,.18); border-radius: 4px; padding: 3px 10px;
+  font-family: var(--sans); transition: color .15s, border-color .15s, background .15s;
+}
+.m-trash:hover { color: var(--parch); border-color: rgba(232,217,187,.45); background: rgba(0,0,0,.4); }
+.mcard.trashed { border-color: rgba(232,217,187,.22); background: linear-gradient(170deg, rgba(22,26,38,.92), rgba(10,12,22,.94)); }
+.mcard.trashed .g { color: rgba(255,255,255,.82); }
+.trash-acts { margin-top: 10px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
 
 /* 云同步面板 */

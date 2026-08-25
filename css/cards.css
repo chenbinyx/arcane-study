@@ -203,6 +203,8 @@
 
 /* ============ 读音选项 ============ */
 .choices { display: flex; gap: 18px; margin-top: 26px; flex-wrap: wrap; justify-content: center; }
+/* 错字复习：下方预留两行空白，让界面整体更居中 */
+.quiz-spacer { height: 2.6em; flex-shrink: 0; }
 .choice {
   min-width: 172px; padding: 17px 26px; cursor: pointer; position: relative;
   font-family: var(--serif); font-size: 27px; letter-spacing: 2px; color: var(--parch);

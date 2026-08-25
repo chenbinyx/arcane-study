@@ -9,6 +9,7 @@ var Review = (function () {
   var mode = 'read';  /* read=识字错误, write=听写错误 */
   var quiz = null;
   var selOn = false;  /* 多选模式 */
+  var trashOn = false; /* 复习垃圾箱视图 */
   var MAX_RETRY = 3;  /* 同一字单局最多重练次数（含首次） */
 
   /* 存储键：字 + 类型，与 Store.keyOf 保持一致 */
@@ -59,6 +60,7 @@ var Review = (function () {
 
   function render() {
     bindSeg();
+    if (trashOn) { renderTrash(); return; }
     var host = document.getElementById('reviewBody');
     var all = Store.mistakeList();
     /* 临时退出后重新点开：若上一局复习还在进行，提示可继续（进度不清零） */
@@ -84,9 +86,10 @@ var Review = (function () {
   /* ================= 按日期分组错字列表 ================= */
   function renderList(host, all, resumeHtml) {
     var isRead = mode === 'read';
+    var trashedCount = all.filter(function (m) { return m.trashed; }).length;
     var filtered = all.filter(function (m) {
       var t = m.type || (m.src === 'dictation' ? 'write' : 'read');
-      return isRead ? (t === 'read') : (t === 'write');
+      return (isRead ? (t === 'read') : (t === 'write')) && !m.trashed;
     });
     if (!filtered.length) {
       host.innerHTML = '<div class="empty"><span class="big">暂无' + (isRead ? '识字' : '听写') + '错误</span>' +
@@ -117,6 +120,7 @@ var Review = (function () {
         '<button class="btn-main" onclick="Review.reviewAll()">复习全部' + typeName + '</button> ' +
         '<button class="btn-main ghost" onclick="Review.showAdd()">手动添加</button> ' +
         '<button class="btn-ghost" onclick="Review.toggleSelect()">' + (selOn ? '退出多选' : '多选复习') + '</button> ' +
+        '<button class="btn-ghost" onclick="Review.toggleTrash()">复习垃圾箱 (' + trashedCount + ')</button> ' +
         '<button class="btn-ghost" onclick="Review.showSettings()">听写设置</button>' +
       '</div>' +
 
@@ -170,6 +174,7 @@ var Review = (function () {
       wordsHtml +
       '<div class="n">错 ' + m.wrong + ' 次 · 已练对 ' + m.right + '/3</div>' +
       '<div class="mdate">' + (m.date || m.first || '') + '</div>' +
+      (selOn ? '' : '<button class="m-trash" onclick="Review.trash(\'' + mkey(m) + '\')">收起</button>') +
       '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
     '</div>';
   }
@@ -225,12 +230,82 @@ var Review = (function () {
     startReviewQuiz(pool);
   }
 
+  /* ================= 复习垃圾箱 ================= */
+  /* 把错字「收起」暂存到垃圾箱：记录永久保留（不删除），只是从主列表/常规复习中隐藏；
+     垃圾箱内可「再次添加复习」直接开练，或「恢复」回到错字册。 */
+  function toggleTrash(force) {
+    trashOn = (force === undefined) ? !trashOn : !!force;
+    selOn = false;
+    Sfx.tick();
+    render();
+  }
+  function trash(k) {
+    var g = Store.get();
+    if (g.mistakes[k]) { g.mistakes[k].trashed = true; Store.save(); Sfx.tick(); App.toast('已收起到复习垃圾箱'); render(); }
+  }
+  function restore(k) {
+    var g = Store.get();
+    if (g.mistakes[k]) { g.mistakes[k].trashed = false; Store.save(); Sfx.tick(); App.toast('已恢复到错字册'); render(); }
+  }
+  function reviewFromTrash(k) {
+    var g = Store.get(), m = g.mistakes[k];
+    if (!m) { App.toast('找不到该错字'); return; }
+    startReviewQuiz([m]);   /* 从垃圾箱直接开练，记录仍保留在箱内，可反复复习 */
+  }
+  function renderTrash() {
+    var host = document.getElementById('reviewBody');
+    var all = Store.mistakeList().filter(function (m) { return m.trashed; });
+    if (!all.length) {
+      host.innerHTML = '<div class="empty"><span class="big">复习垃圾箱是空的</span>' +
+        '<p>把暂不练的错字点「收起」放进来，记录永久保留，随时可再次添加复习。</p>' +
+        '<div style="margin-top:18px"><button class="btn-main" onclick="Review.toggleTrash()">返回错字册</button></div></div>';
+      return;
+    }
+    host.innerHTML =
+      '<div style="margin-bottom:14px">' +
+        '<button class="btn-main" onclick="Review.toggleTrash()">← 返回错字册</button> ' +
+        '<span style="color:rgba(232,217,187,.6);font-size:13px;margin-left:8px">共 ' + all.length + ' 个收起的错字（永久保留）</span>' +
+      '</div>' +
+      '<div class="mistake-grid">' + all.map(trashCardHtml).join('') + '</div>';
+    bindTrash(host);
+  }
+  function trashCardHtml(m) {
+    var isRead = m.type !== 'write';
+    var typeLbl = isRead ? '识字' : '听写';
+    var typeColor = isRead ? '#55d6ff' : '#ffa34e';
+    var cws = cardWords(m);
+    var wordsHtml = cws.length ? '<div class="cw">词 ' + cws.map(function (w0) { return '<span>' + w0 + '</span>'; }).join('') + '</div>' : '';
+    return '<div class="mcard trashed" data-k="' + mkey(m) + '">' +
+      '<span class="type-btn" style="color:' + typeColor + '">' + typeLbl + '</span>' +
+      '<div class="g' + (m.c.length > 1 ? ' small' : '') + '">' + m.c + '</div>' +
+      '<div class="p">' + fillPinyin(m.c, m.p) + '</div>' +
+      wordsHtml +
+      '<div class="n">错 ' + m.wrong + ' 次</div>' +
+      '<div class="mdate">' + (m.date || m.first || '') + '</div>' +
+      '<div class="trash-acts">' +
+        '<button class="btn-main ghost small" onclick="Review.reviewFromTrash(\'' + mkey(m) + '\')">再次添加复习</button> ' +
+        '<button class="btn-ghost small" onclick="Review.restore(\'' + mkey(m) + '\')">恢复</button>' +
+      '</div>' +
+    '</div>';
+  }
+  function bindTrash(host) {
+    host.querySelectorAll('.mcard.trashed').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        if (e.target.closest('button')) return;
+        var k = el.dataset.k, m = Store.get().mistakes[k];
+        if (m) Sfx.teacherRead([m.c], '', function () {
+          if (m.s) Sfx.sentenceRead(m.c, null, function () { Sfx.say(m.c + '。' + (m.s || ''), { rate: .92 }); });
+        });
+      });
+    });
+  }
+
   /* ================= 按日期复习 ================= */
   function reviewDate(date) {
     var isRead = mode === 'read';
     var all = Store.mistakeList().filter(function (m) {
       var t = m.type || (m.src === 'dictation' ? 'write' : 'read');
-      return (isRead ? t === 'read' : t === 'write') && m.right < 3 && (m.date === date || m.first === date);
+      return (isRead ? t === 'read' : t === 'write') && !m.trashed && m.right < 3 && (m.date === date || m.first === date);
     });
     if (!all.length) { App.toast('该日期没有待复习的错字'); return; }
     startReviewQuiz(all);
@@ -240,7 +315,7 @@ var Review = (function () {
     var isRead = mode === 'read';
     var all = Store.mistakeList().filter(function (m) {
       var t = m.type || (m.src === 'dictation' ? 'write' : 'read');
-      return (isRead ? t === 'read' : t === 'write') && m.right < 3;
+      return (isRead ? t === 'read' : t === 'write') && !m.trashed && m.right < 3;
     });
     if (!all.length) { App.toast('没有待复习的错字'); return; }
     startReviewQuiz(all);
@@ -287,7 +362,9 @@ var Review = (function () {
       '</div>' +
       '<div class="choices">' + opts.map(function (p) {
         return '<div class="choice" data-p="' + p + '">' + p + '</div>';
-      }).join('') + '</div>';
+      }).join('') + '</div>' +
+      /* 下方预留两行空白，让复习界面整体更居中 */
+      '<div class="quiz-spacer" aria-hidden="true"></div>';
 
     if (window.Timer) { Timer.update('review'); Timer.sync('review'); }
     if (quiz.combo >= 3) FX.comboFire(quiz.combo);
@@ -483,6 +560,7 @@ var Review = (function () {
     speakFix: speakFix, reviewNext: reviewNext,
     resume: resume, forgetSession: forgetSession, flush: flush,
     toggleSelect: toggleSelect, selectAll: selectAll, clearSel: clearSel, addSelectedToReview: addSelectedToReview,
+    toggleTrash: toggleTrash, trash: trash, restore: restore, reviewFromTrash: reviewFromTrash,
     updateSelBar: updateSelBar
   };
 })();
